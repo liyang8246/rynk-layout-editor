@@ -1,2 +1,4 @@
 allowBuilds:
   agent-browser: true
+minimumReleaseAgeExclude:
+  - daisyui@5.6.13
