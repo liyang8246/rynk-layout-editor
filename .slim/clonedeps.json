@@ -1,0 +1,24 @@
+{
+  "version": "1.0.0",
+  "updatedAt": "2026-07-04T00:00:00.000Z",
+  "dependencies": [
+    {
+      "name": "rmk/rynk-kle",
+      "resolvedVersion": "5ea8acd",
+      "repoUrl": "https://github.com/HaoboGu/rmk.git",
+      "ref": "feat/rynk_layout",
+      "path": ".slim/clonedeps/repos/HaoboGu__rmk",
+      "packagePath": "rynk/rynk-kle",
+      "reason": "Target output format — KLE→Rynk TOML conversion logic, data structures, and WASM bindings"
+    },
+    {
+      "name": "keyboard-layout-editor",
+      "resolvedVersion": "580b916",
+      "repoUrl": "https://github.com/ijprest/keyboard-layout-editor.git",
+      "ref": "master",
+      "path": ".slim/clonedeps/repos/ijprest__keyboard-layout-editor",
+      "packagePath": "",
+      "reason": "Source input format — KLE JSON schema, key metadata, and rendering reference"
+    }
+  ]
+}
