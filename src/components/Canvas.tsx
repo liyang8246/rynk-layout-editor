@@ -36,7 +36,7 @@ interface WireLine {
   x2: number
   y2: number
   type: 'row' | 'col'
-  dashed: boolean
+  highlighted: boolean
 }
 
 export function Canvas() {
@@ -145,19 +145,21 @@ export function Canvas() {
   const wiringLines = createMemo((): WireLine[] => {
     const lines: WireLine[] = []
 
-    // Build pin lookup maps
-    const rowPins = new Map<number, { x: number, y: number }>()
-    const colPins = new Map<number, { x: number, y: number }>()
+    const selected = new Set(state.selectedIds)
+
+    // Build pin lookup maps (id + position for highlight check)
+    const rowPins = new Map<number, { id: string, x: number, y: number }>()
+    const colPins = new Map<number, { id: string, x: number, y: number }>()
     for (const pin of state.pins) {
       if (pin.direction === 'row')
-        rowPins.set(pin.index, { x: pin.x, y: pin.y })
+        rowPins.set(pin.index, { id: pin.id, x: pin.x, y: pin.y })
       else
-        colPins.set(pin.index, { x: pin.x, y: pin.y })
+        colPins.set(pin.index, { id: pin.id, x: pin.x, y: pin.y })
     }
 
-    // Group keys by row pin index and col pin index
-    const keysByRow = new Map<number, { x: number, y: number }[]>()
-    const keysByCol = new Map<number, { x: number, y: number }[]>()
+    // Group keys by row/col pin index, track key ids for highlight
+    const keysByRow = new Map<number, { id: string, x: number, y: number }[]>()
+    const keysByCol = new Map<number, { id: string, x: number, y: number }[]>()
     for (const key of state.keys) {
       if (key.row >= 0) {
         let group = keysByRow.get(key.row)
@@ -165,7 +167,7 @@ export function Canvas() {
           group = []
           keysByRow.set(key.row, group)
         }
-        group.push({ x: key.x * KEY_UNIT, y: key.y * KEY_UNIT })
+        group.push({ id: key.id, x: key.x * KEY_UNIT, y: key.y * KEY_UNIT })
       }
       if (key.col >= 0) {
         let group = keysByCol.get(key.col)
@@ -173,19 +175,27 @@ export function Canvas() {
           group = []
           keysByCol.set(key.col, group)
         }
-        group.push({ x: key.x * KEY_UNIT, y: key.y * KEY_UNIT })
+        group.push({ id: key.id, x: key.x * KEY_UNIT, y: key.y * KEY_UNIT })
       }
     }
 
-    // For each row pin: chain Pin → nearest key → next nearest → ...
-    for (const [rowIdx, keys] of keysByRow) {
-      const pin = rowPins.get(rowIdx)
-      if (!pin) continue
+    // Check if a chain involves any selected item
+    const isChainHighlighted = (pinId: string, keys: { id: string }[]): boolean => {
+      if (selected.has(pinId)) return true
+      return keys.some(k => selected.has(k.id))
+    }
+
+    // Build chain lines for a pin group
+    const buildChain = (
+      pin: { id: string, x: number, y: number },
+      keys: { id: string, x: number, y: number }[],
+      type: 'row' | 'col',
+    ) => {
+      const highlighted = isChainHighlighted(pin.id, keys)
       const px = pin.x * KEY_UNIT
       const py = pin.y * KEY_UNIT
-      const fullyWired = keysByCol.has(rowIdx) // approximation: has col assignments too
 
-      // Sort keys by distance from pin, then chain nearest-neighbor
+      // Sort keys by distance from pin
       const sorted = [...keys].sort((a, b) => {
         const da = (a.x - px) ** 2 + (a.y - py) ** 2
         const db = (b.x - px) ** 2 + (b.y - py) ** 2
@@ -193,19 +203,11 @@ export function Canvas() {
       })
 
       // Pin → first key
-      lines.push({
-        x1: px,
-        y1: py,
-        x2: sorted[0].x,
-        y2: sorted[0].y,
-        type: 'row',
-        dashed: !fullyWired,
-      })
+      lines.push({ x1: px, y1: py, x2: sorted[0].x, y2: sorted[0].y, type, highlighted })
 
-      // Each key → next nearest key (chain)
+      // Chain: each key → nearest unvisited key
       for (let i = 0; i < sorted.length - 1; i++) {
         const current = sorted[i]
-        // Find nearest unvisited key from current
         let bestDist = Infinity
         let bestIdx = i + 1
         for (let j = i + 1; j < sorted.length; j++) {
@@ -215,67 +217,21 @@ export function Canvas() {
             bestIdx = j
           }
         }
-        // Swap to maintain order
-        if (bestIdx !== i + 1) {
+        if (bestIdx !== i + 1)
           [sorted[i + 1], sorted[bestIdx]] = [sorted[bestIdx], sorted[i + 1]]
-        }
-        lines.push({
-          x1: current.x,
-          y1: current.y,
-          x2: sorted[i + 1].x,
-          y2: sorted[i + 1].y,
-          type: 'row',
-          dashed: !fullyWired,
-        })
+
+        lines.push({ x1: current.x, y1: current.y, x2: sorted[i + 1].x, y2: sorted[i + 1].y, type, highlighted })
       }
     }
 
-    // For each col pin: same chain logic
+    for (const [rowIdx, keys] of keysByRow) {
+      const pin = rowPins.get(rowIdx)
+      if (pin) buildChain(pin, keys, 'row')
+    }
+
     for (const [colIdx, keys] of keysByCol) {
       const pin = colPins.get(colIdx)
-      if (!pin) continue
-      const px = pin.x * KEY_UNIT
-      const py = pin.y * KEY_UNIT
-      const fullyWired = keysByRow.has(colIdx)
-
-      const sorted = [...keys].sort((a, b) => {
-        const da = (a.x - px) ** 2 + (a.y - py) ** 2
-        const db = (b.x - px) ** 2 + (b.y - py) ** 2
-        return da - db
-      })
-
-      lines.push({
-        x1: px,
-        y1: py,
-        x2: sorted[0].x,
-        y2: sorted[0].y,
-        type: 'col',
-        dashed: !fullyWired,
-      })
-
-      for (let i = 0; i < sorted.length - 1; i++) {
-        const current = sorted[i]
-        let bestDist = Infinity
-        let bestIdx = i + 1
-        for (let j = i + 1; j < sorted.length; j++) {
-          const d = (sorted[j].x - current.x) ** 2 + (sorted[j].y - current.y) ** 2
-          if (d < bestDist) {
-            bestDist = d
-            bestIdx = j
-          }
-        }
-        if (bestIdx !== i + 1) {
-          [sorted[i + 1], sorted[bestIdx]] = [sorted[bestIdx], sorted[i + 1]]
-        }
-        lines.push({
-          x1: current.x,
-          y1: current.y,
-          x2: sorted[i + 1].x,
-          y2: sorted[i + 1].y,
-          type: 'col',
-          dashed: !fullyWired,
-        })
-      }
+      if (pin) buildChain(pin, keys, 'col')
     }
 
     return lines
@@ -299,7 +255,6 @@ export function Canvas() {
     if (lines.length === 0) return
 
     // Resolve daisyUI semantic colors to computed rgb values via a temp HTML element
-    // (can't use CSS variables directly in SVG stroke attribute)
     const resolveColor = (cls: string): string => {
       const tmp = document.createElement('div')
       tmp.className = cls
@@ -314,18 +269,25 @@ export function Canvas() {
     const rowColor = resolveColor('bg-secondary')
     const colColor = resolveColor('bg-accent')
 
-    for (const line of lines) {
+    // Draw non-highlighted lines first, then highlighted lines on top
+    const drawLine = (line: WireLine) => {
       const el = document.createElementNS('http://www.w3.org/2000/svg', 'line')
       el.setAttribute('x1', String(line.x1))
       el.setAttribute('y1', String(line.y1))
       el.setAttribute('x2', String(line.x2))
       el.setAttribute('y2', String(line.y2))
       el.setAttribute('stroke', line.type === 'row' ? rowColor : colColor)
-      el.setAttribute('stroke-opacity', '0.6')
-      el.setAttribute('stroke-width', '2')
-      if (line.dashed)
-        el.setAttribute('stroke-dasharray', '6 4')
+      el.setAttribute('stroke-opacity', line.highlighted ? '1' : '0.4')
+      el.setAttribute('stroke-width', line.highlighted ? '3' : '2')
+      el.setAttribute('stroke-dasharray', '6 4')
       svg.appendChild(el)
+    }
+
+    for (const line of lines) {
+      if (!line.highlighted) drawLine(line)
+    }
+    for (const line of lines) {
+      if (line.highlighted) drawLine(line)
     }
   })
 
