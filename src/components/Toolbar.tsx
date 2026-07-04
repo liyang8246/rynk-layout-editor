@@ -1,6 +1,7 @@
 import {
   addEncoder,
   addKey,
+  addPin,
   autoNumberMatrix,
   deleteSelected,
   hasSelection,
@@ -17,6 +18,13 @@ export function Toolbar() {
 
       <button class="btn btn-sm btn-accent" onClick={() => addEncoder(5, 3)}>
         Add Encoder
+      </button>
+
+      <button class="btn btn-sm btn-secondary" onClick={() => addPin(1, 1 + state.pins.filter(p => p.direction === 'row').length * 0.75, 'row')}>
+        + Row Pin
+      </button>
+      <button class="btn btn-sm btn-secondary btn-outline" onClick={() => addPin(1, 1 + state.pins.filter(p => p.direction === 'col').length * 0.75, 'col')}>
+        + Col Pin
       </button>
 
       <button
@@ -42,7 +50,7 @@ export function Toolbar() {
           value={state.matrixRows}
           onInput={e =>
             setMatrixSize(
-              parseInt(e.currentTarget.value) || 1,
+              Number.parseInt(e.currentTarget.value) || 1,
               state.matrixCols,
             )}
         />
@@ -58,7 +66,7 @@ export function Toolbar() {
           onInput={e =>
             setMatrixSize(
               state.matrixRows,
-              parseInt(e.currentTarget.value) || 1,
+              Number.parseInt(e.currentTarget.value) || 1,
             )}
         />
       </label>
@@ -71,7 +79,10 @@ export function Toolbar() {
         keys ·
         {state.encoders.length}
         {' '}
-        encoders
+        encoders ·
+        {state.pins.length}
+        {' '}
+        pins
       </span>
     </div>
   )

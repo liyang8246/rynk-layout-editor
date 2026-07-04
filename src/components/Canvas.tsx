@@ -12,6 +12,7 @@ import {
 } from '../stores/layout'
 import { EncoderKnob } from './EncoderKnob'
 import { KeyCap } from './KeyCap'
+import { PinNode } from './PinNode'
 
 /** Drag state for rubber-band selection */
 interface RubberBandState {
@@ -23,7 +24,7 @@ interface RubberBandState {
 }
 
 /** Drag state for moving selected items */
-interface ItemDragState {
+interface CanvasDragState {
   startClientX: number // screen px
   startClientY: number
   canvasRef: HTMLDivElement
@@ -31,7 +32,7 @@ interface ItemDragState {
 
 export function Canvas() {
   const [rubberBand, setRubberBand] = createSignal<RubberBandState | null>(null)
-  const [itemDrag, setItemDrag] = createSignal<ItemDragState | null>(null)
+  const [canvasDrag, setCanvasDrag] = createSignal<CanvasDragState | null>(null)
   let canvasRef!: HTMLDivElement
 
   const getCanvasPos = (e: MouseEvent) => {
@@ -62,11 +63,11 @@ export function Canvas() {
 
   const handleDragStart = (startClientX: number, startClientY: number) => {
     startItemDrag()
-    setItemDrag({ startClientX, startClientY, canvasRef })
+    setCanvasDrag({ startClientX, startClientY, canvasRef })
 
     // Attach document-level listeners so drag continues even if pointer leaves canvas
     const onMove = (e: PointerEvent) => {
-      const d = itemDrag()
+      const d = canvasDrag()
       if (!d) return
       const dx = pxToUnit(e.clientX - d.startClientX)
       const dy = pxToUnit(e.clientY - d.startClientY)
@@ -75,7 +76,7 @@ export function Canvas() {
 
     const onUp = () => {
       endItemDrag()
-      setItemDrag(null)
+      setCanvasDrag(null)
       document.removeEventListener('pointermove', onMove)
       document.removeEventListener('pointerup', onUp)
     }
@@ -129,6 +130,56 @@ export function Canvas() {
     return { left, top, width, height }
   }
 
+  const wiringLines = () => {
+    const lines: { x1: number, y1: number, x2: number, y2: number, type: 'row' | 'col', dashed: boolean }[] = []
+
+    // Build pin lookup maps
+    const rowPins = new Map<number, { x: number, y: number }>()
+    const colPins = new Map<number, { x: number, y: number }>()
+    for (const pin of state.pins) {
+      if (pin.direction === 'row') rowPins.set(pin.index, { x: pin.x, y: pin.y })
+      else colPins.set(pin.index, { x: pin.x, y: pin.y })
+    }
+
+    for (const key of state.keys) {
+      const kx = key.x * KEY_UNIT
+      const ky = key.y * KEY_UNIT
+      const hasRow = key.row >= 0
+      const hasCol = key.col >= 0
+      const fullyWired = hasRow && hasCol
+
+      if (hasRow) {
+        const pin = rowPins.get(key.row)
+        if (pin) {
+          lines.push({
+            x1: kx,
+            y1: ky,
+            x2: pin.x * KEY_UNIT,
+            y2: pin.y * KEY_UNIT,
+            type: 'row',
+            dashed: !fullyWired,
+          })
+        }
+      }
+
+      if (hasCol) {
+        const pin = colPins.get(key.col)
+        if (pin) {
+          lines.push({
+            x1: kx,
+            y1: ky,
+            x2: pin.x * KEY_UNIT,
+            y2: pin.y * KEY_UNIT,
+            type: 'col',
+            dashed: !fullyWired,
+          })
+        }
+      }
+    }
+
+    return lines
+  }
+
   return (
     <div class="flex-1 overflow-auto bg-base-100 p-4">
       <div
@@ -153,6 +204,26 @@ export function Canvas() {
           }}
         />
 
+        {/* Wiring lines */}
+        <svg
+          class="pointer-events-none absolute inset-0"
+          style={{ width: '100%', height: '100%' }}
+        >
+          <For each={wiringLines()}>
+            {line => (
+              <line
+                x1={line.x1}
+                y1={line.y1}
+                x2={line.x2}
+                y2={line.y2}
+                stroke={line.type === 'row' ? 'hsl(var(--s) / 0.5)' : 'hsl(var(--a) / 0.5)'}
+                stroke-width="2"
+                stroke-dasharray={line.dashed ? '6 4' : 'none'}
+              />
+            )}
+          </For>
+        </svg>
+
         {/* Keys */}
         <For each={state.keys}>
           {key => (
@@ -170,6 +241,17 @@ export function Canvas() {
             <EncoderKnob
               encoder={encoder}
               selected={state.selectedIds.includes(encoder.id)}
+              onDragStart={handleDragStart}
+            />
+          )}
+        </For>
+
+        {/* Pins */}
+        <For each={state.pins}>
+          {pin => (
+            <PinNode
+              pin={pin}
+              selected={state.selectedIds.includes(pin.id)}
               onDragStart={handleDragStart}
             />
           )}

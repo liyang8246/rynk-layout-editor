@@ -33,10 +33,29 @@ export interface EncoderData {
   y: number // center Y in key units
 }
 
+/** Pin direction: row or column */
+export type PinDirection = 'row' | 'col'
+
+/** A pin on the layout canvas representing an MCU row/column pin */
+export interface PinData {
+  id: string
+  direction: PinDirection
+  index: number // matrix row/col index (0, 1, 2...)
+  x: number // center X in key units
+  y: number // center Y in key units
+}
+
+/** Discriminated union of all canvas item types */
+export type CanvasItem
+  = { type: 'key', data: KeyData }
+    | { type: 'encoder', data: EncoderData }
+    | { type: 'pin', data: PinData }
+
 /** Complete layout state */
 export interface LayoutState {
   keys: KeyData[]
   encoders: EncoderData[]
+  pins: PinData[]
   matrixRows: number
   matrixCols: number
   selectedIds: string[]
@@ -51,11 +70,16 @@ export const KEY_UNIT = 60
 export const STEP_FINE = 0.25
 export const STEP_COARSE = 1
 
+/** Pin visual size in key units */
+export const PIN_W = 0.75
+export const PIN_H = 0.5
+
 // ── Store ──────────────────────────────────────────────────────────────────────
 
 const [state, setState] = createStore<LayoutState>({
   keys: [],
   encoders: [],
+  pins: [],
   matrixRows: 5,
   matrixCols: 15,
   selectedIds: [],
@@ -82,13 +106,10 @@ export { isDragging }
 /** Start dragging all currently selected items. Call on pointerdown on a selected item. */
 export function startItemDrag(): void {
   const origins = new Map<string, { x: number, y: number }>()
-  const ids = new Set(state.selectedIds)
-  for (const key of state.keys) {
-    if (ids.has(key.id)) origins.set(key.id, { x: key.x, y: key.y })
-  }
-
-  for (const enc of state.encoders) {
-    if (ids.has(enc.id)) origins.set(enc.id, { x: enc.x, y: enc.y })
+  for (const id of state.selectedIds) {
+    const item = getItem(id)
+    if (item)
+      origins.set(id, { x: item.data.x, y: item.data.y })
   }
 
   itemDragState = { origins, lastDx: 0, lastDy: 0 }
@@ -100,26 +121,12 @@ export function updateItemDrag(dx: number, dy: number): void {
   const d = itemDragState
   if (!d) return
 
-  const ids = new Set(state.selectedIds)
-
-  setState('keys', produce((keys) => {
-    for (const key of keys) {
-      if (!ids.has(key.id)) continue
-      const o = d.origins.get(key.id)
-      if (!o) continue
-      key.x = Math.max(key.w / 2, o.x + dx)
-      key.y = Math.max(key.h / 2, o.y + dy)
-    }
-  }))
-  setState('encoders', produce((encoders) => {
-    for (const enc of encoders) {
-      if (!ids.has(enc.id)) continue
-      const o = d.origins.get(enc.id)
-      if (!o) continue
-      enc.x = Math.max(0.5, o.x + dx)
-      enc.y = Math.max(0.5, o.y + dy)
-    }
-  }))
+  for (const id of state.selectedIds) {
+    const bounds = getItemBounds(id)
+    const o = d.origins.get(id)
+    if (!bounds || !o) continue
+    updateItemPosition(id, Math.max(bounds.w / 2, o.x + dx), Math.max(bounds.h / 2, o.y + dy))
+  }
 
   d.lastDx = dx
   d.lastDy = dy
@@ -129,23 +136,11 @@ export function updateItemDrag(dx: number, dy: number): void {
 export function endItemDrag(): void {
   if (!itemDragState) return
 
-  const ids = new Set(state.selectedIds)
-
-  // Snap current positions
-  setState('keys', produce((keys) => {
-    for (const key of keys) {
-      if (!ids.has(key.id)) continue
-      key.x = snap(key.x)
-      key.y = snap(key.y)
-    }
-  }))
-  setState('encoders', produce((encoders) => {
-    for (const enc of encoders) {
-      if (!ids.has(enc.id)) continue
-      enc.x = snap(enc.x)
-      enc.y = snap(enc.y)
-    }
-  }))
+  for (const id of state.selectedIds) {
+    const item = getItem(id)
+    if (item)
+      updateItemPosition(id, snap(item.data.x), snap(item.data.y))
+  }
 
   itemDragState = null
   setIsDragging(false)
@@ -165,9 +160,21 @@ export function selectedEncoder(): EncoderData | undefined {
   return state.encoders.find(e => e.id === state.selectedIds[0])
 }
 
+/** The single selected pin */
+export function selectedPin(): PinData | undefined {
+  if (state.selectedIds.length !== 1) return undefined
+  return state.pins.find(p => p.id === state.selectedIds[0])
+}
+
 /** Whether any items are selected */
 export function hasSelection(): boolean {
   return state.selectedIds.length > 0
+}
+
+/** Whether any keys are in the current selection */
+export function hasSelectedKeys(): boolean {
+  const ids = new Set(state.selectedIds)
+  return state.keys.some(k => ids.has(k.id))
 }
 
 // ── Actions ────────────────────────────────────────────────────────────────────
@@ -208,6 +215,7 @@ export function deleteSelected(): void {
   const ids = new Set(state.selectedIds)
   setState('keys', prev => prev.filter(k => !ids.has(k.id)))
   setState('encoders', prev => prev.filter(e => !ids.has(e.id)))
+  setState('pins', prev => prev.filter(p => !ids.has(p.id)))
   setState('selectedIds', [])
 }
 
@@ -236,22 +244,14 @@ export function selectItemsInRect(x1: number, y1: number, x2: number, y2: number
 
   const ids: string[] = []
 
-  for (const key of state.keys) {
-    const kx1 = key.x - key.w / 2
-    const ky1 = key.y - key.h / 2
-    const kx2 = key.x + key.w / 2
-    const ky2 = key.y + key.h / 2
-    if (kx2 > left && kx1 < right && ky2 > top && ky1 < bottom)
-      ids.push(key.id)
-  }
-
-  for (const enc of state.encoders) {
-    const ex1 = enc.x - 0.5
-    const ey1 = enc.y - 0.5
-    const ex2 = enc.x + 0.5
-    const ey2 = enc.y + 0.5
-    if (ex2 > left && ex1 < right && ey2 > top && ey1 < bottom)
-      ids.push(enc.id)
+  for (const item of getAllItems()) {
+    const b = canvasItemBounds(item)
+    const ix1 = b.x - b.w / 2
+    const iy1 = b.y - b.h / 2
+    const ix2 = b.x + b.w / 2
+    const iy2 = b.y + b.h / 2
+    if (ix2 > left && ix1 < right && iy2 > top && iy1 < bottom)
+      ids.push(item.data.id)
   }
 
   if (additive) setState('selectedIds', prev => [...new Set([...prev, ...ids])])
@@ -260,23 +260,12 @@ export function selectItemsInRect(x1: number, y1: number, x2: number, y2: number
 
 /** Move selected items by delta (keyboard). Clamps to keep items in view. */
 export function moveSelected(dx: number, dy: number): void {
-  const ids = new Set(state.selectedIds)
-  setState('keys', produce((keys) => {
-    for (const key of keys) {
-      if (ids.has(key.id)) {
-        key.x = Math.max(key.w / 2, snap(key.x + dx))
-        key.y = Math.max(key.h / 2, snap(key.y + dy))
-      }
-    }
-  }))
-  setState('encoders', produce((encoders) => {
-    for (const enc of encoders) {
-      if (ids.has(enc.id)) {
-        enc.x = Math.max(0.5, snap(enc.x + dx))
-        enc.y = Math.max(0.5, snap(enc.y + dy))
-      }
-    }
-  }))
+  for (const id of state.selectedIds) {
+    const item = getItem(id)
+    const bounds = getItemBounds(id)
+    if (!item || !bounds) continue
+    updateItemPosition(id, Math.max(bounds.w / 2, snap(item.data.x + dx)), Math.max(bounds.h / 2, snap(item.data.y + dy)))
+  }
 }
 
 /** Update a key's property */
@@ -298,6 +287,50 @@ export function updateEncoder(id: string, updates: Partial<Omit<EncoderData, 'id
   const idx = state.encoders.findIndex(e => e.id === id)
   if (idx === -1) return
   setState('encoders', idx, updates as any)
+}
+
+/** Add a new pin at the given position */
+export function addPin(cx: number, cy: number, direction: PinDirection): string {
+  const id = nanoid()
+  // Auto-assign next available index for this direction
+  const existingIndices = state.pins
+    .filter(p => p.direction === direction)
+    .map(p => p.index)
+  const nextIndex = existingIndices.length === 0 ? 0 : Math.max(...existingIndices) + 1
+  setState('pins', prev => [...prev, { id, direction, index: nextIndex, x: cx, y: cy }])
+  return id
+}
+
+/** Update a pin's property */
+export function updatePin(id: string, updates: Partial<Omit<PinData, 'id'>>): void {
+  const idx = state.pins.findIndex(p => p.id === id)
+  if (idx === -1) return
+  // Validate: if changing direction or index, check for duplicate
+  if (updates.direction !== undefined || updates.index !== undefined) {
+    const pin = state.pins[idx]
+    const newDir = updates.direction ?? pin.direction
+    const newIdx = updates.index ?? pin.index
+    const duplicate = state.pins.some(p => p.id !== id && p.direction === newDir && p.index === newIdx)
+    if (duplicate)
+      return // silently reject duplicate index per direction
+  }
+  setState('pins', idx, updates as any)
+}
+
+/** Connect all selected keys to the given pin (assign row/col) */
+export function connectSelectedToPin(pinId: string): void {
+  const pin = state.pins.find(p => p.id === pinId)
+  if (!pin) return
+  const ids = new Set(state.selectedIds)
+  setState('keys', produce((keys) => {
+    for (const key of keys) {
+      if (!ids.has(key.id)) continue
+      if (pin.direction === 'row')
+        key.row = pin.index
+      else
+        key.col = pin.index
+    }
+  }))
 }
 
 /** Set matrix dimensions */
@@ -358,6 +391,59 @@ export function toggleLShape(id: string): void {
 
 function snap(value: number): number {
   return Math.round(value * 4) / 4 // snap to 0.25
+}
+
+/** Look up a canvas item by id across all entity arrays */
+export function getItem(id: string): CanvasItem | undefined {
+  const key = state.keys.find(k => k.id === id)
+  if (key) return { type: 'key', data: key }
+  const enc = state.encoders.find(e => e.id === id)
+  if (enc) return { type: 'encoder', data: enc }
+  const pin = state.pins.find(p => p.id === id)
+  if (pin) return { type: 'pin', data: pin }
+  return undefined
+}
+
+/** Get bounding box for a canvas item by id */
+export function getItemBounds(id: string): { x: number, y: number, w: number, h: number } | undefined {
+  const item = getItem(id)
+  if (!item) return undefined
+  return canvasItemBounds(item)
+}
+
+/** Compute bounding box from a CanvasItem */
+function canvasItemBounds(item: CanvasItem): { x: number, y: number, w: number, h: number } {
+  if (item.type === 'key')
+    return { x: item.data.x, y: item.data.y, w: item.data.w, h: item.data.h }
+  if (item.type === 'pin')
+    return { x: item.data.x, y: item.data.y, w: PIN_W, h: PIN_H }
+  return { x: item.data.x, y: item.data.y, w: 1, h: 1 }
+}
+
+/** Get all canvas items (keys + encoders + pins) */
+function getAllItems(): CanvasItem[] {
+  return [
+    ...state.keys.map(k => ({ type: 'key' as const, data: k })),
+    ...state.encoders.map(e => ({ type: 'encoder' as const, data: e })),
+    ...state.pins.map(p => ({ type: 'pin' as const, data: p })),
+  ]
+}
+
+/** Update the position of a canvas item by id */
+export function updateItemPosition(id: string, x: number, y: number): void {
+  const keyIdx = state.keys.findIndex(k => k.id === id)
+  if (keyIdx !== -1) {
+    setState('keys', keyIdx, { x, y })
+    return
+  }
+  const encIdx = state.encoders.findIndex(e => e.id === id)
+  if (encIdx !== -1) {
+    setState('encoders', encIdx, { x, y })
+    return
+  }
+  const pinIdx = state.pins.findIndex(p => p.id === id)
+  if (pinIdx !== -1)
+    setState('pins', pinIdx, { x, y })
 }
 
 // ── Keyboard shortcut hook ─────────────────────────────────────────────────────

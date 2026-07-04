@@ -1,12 +1,14 @@
-import type { EncoderData, KeyData } from '../stores/layout'
+import type { EncoderData, KeyData, PinData } from '../stores/layout'
 import { Show } from 'solid-js'
 import {
   selectedEncoder,
   selectedKey,
+  selectedPin,
   toggleLShape,
   updateEncoder,
   updateKey,
   updateKeyLshape,
+  updatePin,
 } from '../stores/layout'
 
 export function KeyInspector() {
@@ -17,11 +19,19 @@ export function KeyInspector() {
         keyed
         fallback={(
           <Show
-            when={selectedEncoder()}
+            when={selectedPin()}
             keyed
-            fallback={<p class="text-sm text-base-content/50 text-center mt-8">No selection</p>}
+            fallback={(
+              <Show
+                when={selectedEncoder()}
+                keyed
+                fallback={<p class="text-sm text-base-content/50 text-center mt-8">No selection</p>}
+              >
+                {en => <EncoderPanel encoder={en} />}
+              </Show>
+            )}
           >
-            {en => <EncoderPanel encoder={en} />}
+            {p => <PinPanel pin={p} />}
           </Show>
         )}
       >
@@ -185,7 +195,7 @@ function KeyPanel(props: { keyData: KeyData }) {
                 min="-1"
                 class="grow"
                 value={k().row}
-                onInput={e => updateKey(k().id, { row: parseInt(e.currentTarget.value) || -1 })}
+                onInput={e => updateKey(k().id, { row: Number.parseInt(e.currentTarget.value) || -1 })}
               />
             </label>
             <label class="input input-sm input-bordered flex items-center gap-1">
@@ -195,7 +205,79 @@ function KeyPanel(props: { keyData: KeyData }) {
                 min="-1"
                 class="grow"
                 value={k().col}
-                onInput={e => updateKey(k().id, { col: parseInt(e.currentTarget.value) || -1 })}
+                onInput={e => updateKey(k().id, { col: Number.parseInt(e.currentTarget.value) || -1 })}
+              />
+            </label>
+          </div>
+        </div>
+      </div>
+    </fieldset>
+  )
+}
+
+function PinPanel(props: { pin: PinData }) {
+  const p = () => props.pin
+
+  return (
+    <fieldset class="fieldset">
+      <legend class="fieldset-legend text-sm">Pin Properties</legend>
+
+      <div class="flex flex-col gap-2">
+        {/* Direction */}
+        <div class="flex flex-col gap-1">
+          <span class="text-xs font-semibold text-base-content/70">Direction</span>
+          <div class="flex gap-1">
+            <button
+              class="btn btn-xs btn-secondary btn-outline"
+              classList={{ 'btn-active': p().direction === 'row' }}
+              onClick={() => updatePin(p().id, { direction: 'row' })}
+            >
+              Row
+            </button>
+            <button
+              class="btn btn-xs btn-secondary btn-outline"
+              classList={{ 'btn-active': p().direction === 'col' }}
+              onClick={() => updatePin(p().id, { direction: 'col' })}
+            >
+              Col
+            </button>
+          </div>
+        </div>
+
+        {/* Index */}
+        <label class="input input-sm input-bordered flex items-center gap-1">
+          <span class="text-xs text-base-content/60 w-6">Idx</span>
+          <input
+            type="number"
+            min="0"
+            class="grow"
+            value={p().index}
+            onInput={e => updatePin(p().id, { index: Number.parseInt(e.currentTarget.value) || 0 })}
+          />
+        </label>
+
+        {/* Position */}
+        <div class="flex flex-col gap-1">
+          <span class="text-xs font-semibold text-base-content/70">Position</span>
+          <div class="grid grid-cols-2 gap-1">
+            <label class="input input-sm input-bordered flex items-center gap-1">
+              <span class="text-xs text-base-content/60 w-4">X</span>
+              <input
+                type="number"
+                step="0.25"
+                class="grow"
+                value={p().x}
+                onInput={e => updatePin(p().id, { x: Number.parseFloat(e.currentTarget.value) || 0 })}
+              />
+            </label>
+            <label class="input input-sm input-bordered flex items-center gap-1">
+              <span class="text-xs text-base-content/60 w-4">Y</span>
+              <input
+                type="number"
+                step="0.25"
+                class="grow"
+                value={p().y}
+                onInput={e => updatePin(p().id, { y: Number.parseFloat(e.currentTarget.value) || 0 })}
               />
             </label>
           </div>
@@ -220,7 +302,7 @@ function EncoderPanel(props: { encoder: EncoderData }) {
             min="0"
             class="grow"
             value={enc().encoderIndex}
-            onInput={e => updateEncoder(enc().id, { encoderIndex: parseInt(e.currentTarget.value) || 0 })}
+            onInput={e => updateEncoder(enc().id, { encoderIndex: Number.parseInt(e.currentTarget.value) || 0 })}
           />
         </label>
 

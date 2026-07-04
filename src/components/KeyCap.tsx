@@ -8,6 +8,8 @@ interface KeyCapProps {
   onDragStart?: (startX: number, startY: number) => void
 }
 
+const FACE_GAP = 2 // px, m-0.5 ≈ 2px
+
 export function KeyCap(props: KeyCapProps) {
   const handlePointerDown = (e: PointerEvent) => {
     if (e.button !== 0) return
@@ -22,8 +24,6 @@ export function KeyCap(props: KeyCapProps) {
       selectItem(props.key.id, e.ctrlKey || e.metaKey)
     }
   }
-
-  const FACE_GAP = 2 // px, m-0.5 ≈ 2px
 
   return (
     <div
