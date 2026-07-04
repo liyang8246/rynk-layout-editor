@@ -1,5 +1,5 @@
 import { nanoid } from 'nanoid'
-import { onCleanup } from 'solid-js'
+import { createSignal, onCleanup } from 'solid-js'
 import { createStore, produce } from 'solid-js/store'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -62,6 +62,94 @@ const [state, setState] = createStore<LayoutState>({
 })
 
 export { setState, state }
+
+// ── Item drag state ────────────────────────────────────────────────────────────
+
+/** Tracks an active item-drag (moving selected keys/encoders with the mouse) */
+interface ItemDragState {
+  /** Snapshot of selected items' positions at drag start (in key units) */
+  origins: Map<string, { x: number, y: number }>
+  /** Last applied dx/dy in key units (unsapped, for live preview) */
+  lastDx: number
+  lastDy: number
+}
+
+let itemDragState: ItemDragState | null = null
+
+const [isDragging, setIsDragging] = createSignal(false)
+export { isDragging }
+
+/** Start dragging all currently selected items. Call on pointerdown on a selected item. */
+export function startItemDrag(): void {
+  const origins = new Map<string, { x: number, y: number }>()
+  const ids = new Set(state.selectedIds)
+  for (const key of state.keys) {
+    if (ids.has(key.id)) origins.set(key.id, { x: key.x, y: key.y })
+  }
+
+  for (const enc of state.encoders) {
+    if (ids.has(enc.id)) origins.set(enc.id, { x: enc.x, y: enc.y })
+  }
+
+  itemDragState = { origins, lastDx: 0, lastDy: 0 }
+  setIsDragging(true)
+}
+
+/** Update positions during drag (no snap, applied relative to origins). Clamps to ≥0. */
+export function updateItemDrag(dx: number, dy: number): void {
+  const d = itemDragState
+  if (!d) return
+
+  const ids = new Set(state.selectedIds)
+
+  setState('keys', produce((keys) => {
+    for (const key of keys) {
+      if (!ids.has(key.id)) continue
+      const o = d.origins.get(key.id)
+      if (!o) continue
+      key.x = Math.max(key.w / 2, o.x + dx)
+      key.y = Math.max(key.h / 2, o.y + dy)
+    }
+  }))
+  setState('encoders', produce((encoders) => {
+    for (const enc of encoders) {
+      if (!ids.has(enc.id)) continue
+      const o = d.origins.get(enc.id)
+      if (!o) continue
+      enc.x = Math.max(0.5, o.x + dx)
+      enc.y = Math.max(0.5, o.y + dy)
+    }
+  }))
+
+  d.lastDx = dx
+  d.lastDy = dy
+}
+
+/** End drag: snap all positions to 0.25 grid. */
+export function endItemDrag(): void {
+  if (!itemDragState) return
+
+  const ids = new Set(state.selectedIds)
+
+  // Snap current positions
+  setState('keys', produce((keys) => {
+    for (const key of keys) {
+      if (!ids.has(key.id)) continue
+      key.x = snap(key.x)
+      key.y = snap(key.y)
+    }
+  }))
+  setState('encoders', produce((encoders) => {
+    for (const enc of encoders) {
+      if (!ids.has(enc.id)) continue
+      enc.x = snap(enc.x)
+      enc.y = snap(enc.y)
+    }
+  }))
+
+  itemDragState = null
+  setIsDragging(false)
+}
 
 // ── Derived signals ────────────────────────────────────────────────────────────
 
@@ -128,7 +216,8 @@ export function selectItem(id: string, additive: boolean): void {
   if (additive) {
     setState('selectedIds', prev =>
       prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])
-  } else {
+  }
+  else {
     setState('selectedIds', [id])
   }
 }
@@ -169,22 +258,22 @@ export function selectItemsInRect(x1: number, y1: number, x2: number, y2: number
   else setState('selectedIds', ids)
 }
 
-/** Move selected items by delta */
+/** Move selected items by delta (keyboard). Clamps to keep items in view. */
 export function moveSelected(dx: number, dy: number): void {
   const ids = new Set(state.selectedIds)
   setState('keys', produce((keys) => {
     for (const key of keys) {
       if (ids.has(key.id)) {
-        key.x = snap(key.x + dx)
-        key.y = snap(key.y + dy)
+        key.x = Math.max(key.w / 2, snap(key.x + dx))
+        key.y = Math.max(key.h / 2, snap(key.y + dy))
       }
     }
   }))
   setState('encoders', produce((encoders) => {
     for (const enc of encoders) {
       if (ids.has(enc.id)) {
-        enc.x = snap(enc.x + dx)
-        enc.y = snap(enc.y + dy)
+        enc.x = Math.max(0.5, snap(enc.x + dx))
+        enc.y = Math.max(0.5, snap(enc.y + dy))
       }
     }
   }))
@@ -285,20 +374,35 @@ export function useKeyboardShortcuts(): void {
 
     switch (e.key) {
       case 'ArrowLeft':
-        if (hasSelection()) { e.preventDefault(); moveSelected(-step, 0) }
+        if (hasSelection()) {
+          e.preventDefault()
+          moveSelected(-step, 0)
+        }
         break
       case 'ArrowRight':
-        if (hasSelection()) { e.preventDefault(); moveSelected(step, 0) }
+        if (hasSelection()) {
+          e.preventDefault()
+          moveSelected(step, 0)
+        }
         break
       case 'ArrowUp':
-        if (hasSelection()) { e.preventDefault(); moveSelected(0, -step) }
+        if (hasSelection()) {
+          e.preventDefault()
+          moveSelected(0, -step)
+        }
         break
       case 'ArrowDown':
-        if (hasSelection()) { e.preventDefault(); moveSelected(0, step) }
+        if (hasSelection()) {
+          e.preventDefault()
+          moveSelected(0, step)
+        }
         break
       case 'Delete':
       case 'Backspace':
-        if (hasSelection()) { e.preventDefault(); deleteSelected() }
+        if (hasSelection()) {
+          e.preventDefault()
+          deleteSelected()
+        }
         break
       case 'Escape':
         deselectAll()

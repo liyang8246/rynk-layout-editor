@@ -1,13 +1,20 @@
 import { createSignal, For, Show } from 'solid-js'
-import { deselectAll, KEY_UNIT, pxToUnit, selectItemsInRect, state } from '../stores/layout'
+import {
+  deselectAll,
+  endItemDrag,
+  isDragging,
+  KEY_UNIT,
+  pxToUnit,
+  selectItemsInRect,
+  startItemDrag,
+  state,
+  updateItemDrag,
+} from '../stores/layout'
 import { EncoderKnob } from './EncoderKnob'
 import { KeyCap } from './KeyCap'
 
-const MIN_WIDTH = 20 * KEY_UNIT
-const MIN_HEIGHT = 8 * KEY_UNIT
-
 /** Drag state for rubber-band selection */
-interface DragState {
+interface RubberBandState {
   startX: number // px in canvas coords
   startY: number
   currentX: number
@@ -15,26 +22,34 @@ interface DragState {
   additive: boolean // Ctrl held at drag start
 }
 
-export function Canvas() {
-  const [drag, setDrag] = createSignal<DragState | null>(null)
+/** Drag state for moving selected items */
+interface ItemDragState {
+  startClientX: number // screen px
+  startClientY: number
+  canvasRef: HTMLDivElement
+}
 
-  const getCanvasPos = (e: MouseEvent, target: HTMLDivElement) => {
-    const rect = target.getBoundingClientRect()
+export function Canvas() {
+  const [rubberBand, setRubberBand] = createSignal<RubberBandState | null>(null)
+  const [itemDrag, setItemDrag] = createSignal<ItemDragState | null>(null)
+  let canvasRef!: HTMLDivElement
+
+  const getCanvasPos = (e: MouseEvent) => {
+    const rect = canvasRef.getBoundingClientRect()
     return {
-      x: e.clientX - rect.left + target.scrollLeft,
-      y: e.clientY - rect.top + target.scrollTop,
+      x: e.clientX - rect.left + canvasRef.scrollLeft,
+      y: e.clientY - rect.top + canvasRef.scrollTop,
     }
   }
 
-  const handleMouseDown = (e: MouseEvent) => {
-    // Only left button on empty canvas
+  // ── Rubber-band (canvas background drag) ───────────────────────────────────
+
+  const handleCanvasMouseDown = (e: MouseEvent) => {
     if (e.button !== 0) return
     if (e.target !== e.currentTarget) return
 
-    const target = e.currentTarget as HTMLDivElement
-    const pos = getCanvasPos(e, target)
-
-    setDrag({
+    const pos = getCanvasPos(e)
+    setRubberBand({
       startX: pos.x,
       startY: pos.y,
       currentX: pos.x,
@@ -43,51 +58,73 @@ export function Canvas() {
     })
   }
 
-  const handleMouseMove = (e: MouseEvent) => {
-    const d = drag()
-    if (!d) return
+  // ── Item drag (started from KeyCap/EncoderKnob) ────────────────────────────
 
-    const target = e.currentTarget as HTMLDivElement
-    const pos = getCanvasPos(e, target)
-    setDrag({ ...d, currentX: pos.x, currentY: pos.y })
+  const handleDragStart = (startClientX: number, startClientY: number) => {
+    startItemDrag()
+    setItemDrag({ startClientX, startClientY, canvasRef })
+
+    // Attach document-level listeners so drag continues even if pointer leaves canvas
+    const onMove = (e: PointerEvent) => {
+      const d = itemDrag()
+      if (!d) return
+      const dx = pxToUnit(e.clientX - d.startClientX)
+      const dy = pxToUnit(e.clientY - d.startClientY)
+      updateItemDrag(dx, dy)
+    }
+
+    const onUp = () => {
+      endItemDrag()
+      setItemDrag(null)
+      document.removeEventListener('pointermove', onMove)
+      document.removeEventListener('pointerup', onUp)
+    }
+
+    document.addEventListener('pointermove', onMove)
+    document.addEventListener('pointerup', onUp)
+  }
+
+  // ── Global mouse move/up for rubber-band ───────────────────────────────────
+
+  const handleMouseMove = (e: MouseEvent) => {
+    const rb = rubberBand()
+    if (!rb) return
+
+    const pos = getCanvasPos(e)
+    setRubberBand({ ...rb, currentX: pos.x, currentY: pos.y })
   }
 
   const handleMouseUp = (e: MouseEvent) => {
-    const d = drag()
-    if (!d) return
+    const rb = rubberBand()
+    if (!rb) return
 
-    const target = e.currentTarget as HTMLDivElement
-    const pos = getCanvasPos(e, target)
-    const endX = pos.x
-    const endY = pos.y
+    const pos = getCanvasPos(e)
+    const ux1 = pxToUnit(rb.startX)
+    const uy1 = pxToUnit(rb.startY)
+    const ux2 = pxToUnit(pos.x)
+    const uy2 = pxToUnit(pos.y)
 
-    // Convert to key units and select items in the rect
-    const ux1 = pxToUnit(d.startX)
-    const uy1 = pxToUnit(d.startY)
-    const ux2 = pxToUnit(endX)
-    const uy2 = pxToUnit(endY)
-
-    // If drag distance is tiny, treat as click → deselect
     const dx = Math.abs(ux2 - ux1)
     const dy = Math.abs(uy2 - uy1)
     if (dx < 0.1 && dy < 0.1) {
-      if (!d.additive) deselectAll()
-    } else {
-      selectItemsInRect(ux1, uy1, ux2, uy2, d.additive)
+      if (!rb.additive) deselectAll()
+    }
+    else {
+      selectItemsInRect(ux1, uy1, ux2, uy2, rb.additive)
     }
 
-    setDrag(null)
+    setRubberBand(null)
   }
 
-  /** Compute the rubber-band rectangle in px (normalized so left/top is min) */
-  const rubberBand = () => {
-    const d = drag()
-    if (!d) return null
-    const left = Math.min(d.startX, d.currentX)
-    const top = Math.min(d.startY, d.currentY)
-    const width = Math.abs(d.currentX - d.startX)
-    const height = Math.abs(d.currentY - d.startY)
-    // Only show if meaningful size
+  // ── Rubber-band rect computation ───────────────────────────────────────────
+
+  const rubberBandRect = () => {
+    const rb = rubberBand()
+    if (!rb) return null
+    const left = Math.min(rb.startX, rb.currentX)
+    const top = Math.min(rb.startY, rb.currentY)
+    const width = Math.abs(rb.currentX - rb.startX)
+    const height = Math.abs(rb.currentY - rb.startY)
     if (width < 3 && height < 3) return null
     return { left, top, width, height }
   }
@@ -95,21 +132,12 @@ export function Canvas() {
   return (
     <div class="flex-1 overflow-auto bg-base-100 p-4">
       <div
-        class="relative select-none"
+        ref={canvasRef}
+        class="relative select-none w-full h-full"
         classList={{
-          'cursor-crosshair': !drag(),
-          'cursor-default': !!drag(),
+          'cursor-grabbing': isDragging(),
         }}
-        style={{
-          'min-width': `${MIN_WIDTH}px`,
-          'min-height': `${MIN_HEIGHT}px`,
-          'background-image': `
-            linear-gradient(to right, hsl(var(--bc) / 0.08) 1px, transparent 1px),
-            linear-gradient(to bottom, hsl(var(--bc) / 0.08) 1px, transparent 1px)
-          `,
-          'background-size': `${KEY_UNIT}px ${KEY_UNIT}px`,
-        }}
-        onMouseDown={handleMouseDown}
+        onMouseDown={handleCanvasMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
       >
@@ -131,6 +159,7 @@ export function Canvas() {
             <KeyCap
               key={key}
               selected={state.selectedIds.includes(key.id)}
+              onDragStart={handleDragStart}
             />
           )}
         </For>
@@ -141,12 +170,13 @@ export function Canvas() {
             <EncoderKnob
               encoder={encoder}
               selected={state.selectedIds.includes(encoder.id)}
+              onDragStart={handleDragStart}
             />
           )}
         </For>
 
         {/* Rubber-band selection rectangle */}
-        <Show when={rubberBand()}>
+        <Show when={rubberBandRect()}>
           {rect => (
             <div
               class="pointer-events-none absolute border-2 border-primary/50 bg-primary/10"

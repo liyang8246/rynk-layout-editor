@@ -1,21 +1,37 @@
 import type { KeyData } from '../stores/layout'
 import { Show } from 'solid-js'
-import { KEY_UNIT, selectItem } from '../stores/layout'
+import { isDragging, KEY_UNIT, selectItem } from '../stores/layout'
 
 interface KeyCapProps {
   key: KeyData
   selected: boolean
+  onDragStart?: (startX: number, startY: number) => void
 }
 
 export function KeyCap(props: KeyCapProps) {
-  const handleClick = (e: MouseEvent) => {
+  const handlePointerDown = (e: PointerEvent) => {
+    // Only left button
+    if (e.button !== 0) return
     e.stopPropagation()
+
+    // Select the key first
     selectItem(props.key.id, e.ctrlKey || e.metaKey)
+
+    // If this key is now selected, start a potential drag
+    if (props.selected)
+      props.onDragStart?.(e.clientX, e.clientY)
   }
+
+  const FACE_GAP = 2 // px, m-0.5 ≈ 2px
 
   return (
     <div
-      class="absolute cursor-pointer"
+      class="absolute"
+      classList={{
+        'cursor-grab': props.selected && !isDragging(),
+        'cursor-grabbing': props.selected && isDragging(),
+        'cursor-pointer': !props.selected,
+      }}
       style={{
         left: `${(props.key.x - props.key.w / 2) * KEY_UNIT}px`,
         top: `${(props.key.y - props.key.h / 2) * KEY_UNIT}px`,
@@ -23,13 +39,47 @@ export function KeyCap(props: KeyCapProps) {
         height: `${props.key.h * KEY_UNIT}px`,
         transform: `rotate(${props.key.r}deg)`,
       }}
-      onClick={handleClick}
+      onPointerDown={handlePointerDown}
     >
-      {/* Primary key cap */}
+      {/* Border layer: two rects forming the L-shape border */}
+      <div class="absolute inset-0 rounded-md">
+        {/* Primary border rect */}
+        <div
+          class="absolute inset-0 rounded-md"
+          classList={{
+            'bg-primary': props.selected,
+            'bg-base-300': !props.selected,
+          }}
+        />
+
+        {/* L-shape secondary border rect */}
+        <Show when={props.key.lshape}>
+          {lshape => (
+            <div
+              class="absolute rounded-md"
+              classList={{
+                'bg-primary': props.selected,
+                'bg-base-300': !props.selected,
+              }}
+              style={{
+                left: `${lshape().x2 * KEY_UNIT}px`,
+                top: `${lshape().y2 * KEY_UNIT}px`,
+                width: `${lshape().w2 * KEY_UNIT}px`,
+                height: `${lshape().h2 * KEY_UNIT}px`,
+              }}
+            />
+          )}
+        </Show>
+      </div>
+
+      {/* Face layer: primary face (inset by FACE_GAP) */}
       <div
-        class="absolute inset-0 flex items-center justify-center bg-base-200 border border-base-300 rounded-md transition-shadow"
-        classList={{
-          'ring-2 ring-primary': props.selected,
+        class="absolute flex items-center justify-center bg-base-200 rounded-md"
+        style={{
+          left: `${FACE_GAP}px`,
+          top: `${FACE_GAP}px`,
+          right: `${FACE_GAP}px`,
+          bottom: `${FACE_GAP}px`,
         }}
       >
         {/* Matrix label */}
@@ -38,16 +88,16 @@ export function KeyCap(props: KeyCapProps) {
         </span>
       </div>
 
-      {/* L-shape secondary rectangle */}
+      {/* Face layer: L-shape secondary face */}
       <Show when={props.key.lshape}>
         {lshape => (
           <div
-            class="absolute bg-base-300 border border-base-300 rounded-md"
+            class="absolute bg-base-200 rounded-md"
             style={{
-              left: `${lshape().x2 * KEY_UNIT}px`,
-              top: `${lshape().y2 * KEY_UNIT}px`,
-              width: `${lshape().w2 * KEY_UNIT}px`,
-              height: `${lshape().h2 * KEY_UNIT}px`,
+              left: `${lshape().x2 * KEY_UNIT + FACE_GAP}px`,
+              top: `${lshape().y2 * KEY_UNIT + FACE_GAP}px`,
+              width: `${lshape().w2 * KEY_UNIT - FACE_GAP * 2}px`,
+              height: `${lshape().h2 * KEY_UNIT - FACE_GAP * 2}px`,
             }}
           />
         )}
