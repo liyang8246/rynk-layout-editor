@@ -199,7 +199,8 @@ export function Canvas() {
 
   createEffect(() => {
     const svg = svgRef
-    if (!svg) return
+    const canvas = canvasRef
+    if (!svg || !canvas) return
 
     const lines = wiringLines()
 
@@ -207,16 +208,32 @@ export function Canvas() {
     while (svg.firstChild)
       svg.removeChild(svg.firstChild)
 
-    // Draw new lines
-    const rowColor = getComputedStyle(document.documentElement).getPropertyValue('--s').trim()
-    const colColor = getComputedStyle(document.documentElement).getPropertyValue('--a').trim()
+    if (lines.length === 0) return
+
+    // Resolve daisyUI semantic colors to computed rgb values via a temp HTML element
+    // (can't use CSS variables directly in SVG stroke attribute)
+    const resolveColor = (cls: string): string => {
+      const tmp = document.createElement('div')
+      tmp.className = cls
+      tmp.style.position = 'absolute'
+      tmp.style.visibility = 'hidden'
+      tmp.style.pointerEvents = 'none'
+      canvas.appendChild(tmp)
+      const color = getComputedStyle(tmp).backgroundColor
+      canvas.removeChild(tmp)
+      return color
+    }
+    const rowColor = resolveColor('bg-secondary')
+    const colColor = resolveColor('bg-accent')
+
     for (const line of lines) {
       const el = document.createElementNS('http://www.w3.org/2000/svg', 'line')
       el.setAttribute('x1', String(line.x1))
       el.setAttribute('y1', String(line.y1))
       el.setAttribute('x2', String(line.x2))
       el.setAttribute('y2', String(line.y2))
-      el.setAttribute('stroke', line.type === 'row' ? `oklch(${rowColor} / 0.6)` : `oklch(${colColor} / 0.6)`)
+      el.setAttribute('stroke', line.type === 'row' ? rowColor : colColor)
+      el.setAttribute('stroke-opacity', '0.6')
       el.setAttribute('stroke-width', '2')
       if (line.dashed)
         el.setAttribute('stroke-dasharray', '6 4')
