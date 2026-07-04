@@ -12,10 +12,12 @@ export function EncoderKnob(props: EncoderKnobProps) {
     if (e.button !== 0) return
     e.stopPropagation()
 
-    selectItem(props.encoder.id, e.ctrlKey || e.metaKey)
-
-    if (props.selected)
+    if (props.selected) {
       props.onDragStart?.(e.clientX, e.clientY)
+    }
+    else {
+      selectItem(props.encoder.id, e.ctrlKey || e.metaKey)
+    }
   }
 
   return (

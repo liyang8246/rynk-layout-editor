@@ -10,16 +10,17 @@ interface KeyCapProps {
 
 export function KeyCap(props: KeyCapProps) {
   const handlePointerDown = (e: PointerEvent) => {
-    // Only left button
     if (e.button !== 0) return
     e.stopPropagation()
 
-    // Select the key first
-    selectItem(props.key.id, e.ctrlKey || e.metaKey)
-
-    // If this key is now selected, start a potential drag
-    if (props.selected)
+    if (props.selected) {
+      // Already selected: start drag (keep current multi-selection)
       props.onDragStart?.(e.clientX, e.clientY)
+    }
+    else {
+      // Not selected: select it (no drag this click)
+      selectItem(props.key.id, e.ctrlKey || e.metaKey)
+    }
   }
 
   const FACE_GAP = 2 // px, m-0.5 ≈ 2px
