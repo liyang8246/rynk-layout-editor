@@ -1,22 +1,22 @@
 {
   "compilerOptions": {
     "target": "es2023",
-    "module": "esnext",
-    "lib": ["ES2023", "DOM"],
-    "types": ["vite/client", "node"],
-    "skipLibCheck": true,
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "verbatimModuleSyntax": true,
-    "moduleDetection": "force",
-    "noEmit": true,
     "jsx": "preserve",
     "jsxImportSource": "solid-js",
+    "lib": ["ES2023", "DOM"],
+    "moduleDetection": "force",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "types": ["vite/client", "node"],
+    "allowArbitraryExtensions": true,
+    "allowImportingTsExtensions": true,
+    "noFallthroughCasesInSwitch": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
+    "noEmit": true,
+    "verbatimModuleSyntax": true,
     "erasableSyntaxOnly": true,
-    "noFallthroughCasesInSwitch": true,
-    "allowArbitraryExtensions": true
+    "skipLibCheck": true
   },
-  "include": ["src", "vite.config.ts"]
+  "include": ["src", "vite.config.ts", "eslint.config.ts"]
 }
