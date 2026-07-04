@@ -208,13 +208,15 @@ export function Canvas() {
       svg.removeChild(svg.firstChild)
 
     // Draw new lines
+    const rowColor = getComputedStyle(document.documentElement).getPropertyValue('--s').trim()
+    const colColor = getComputedStyle(document.documentElement).getPropertyValue('--a').trim()
     for (const line of lines) {
       const el = document.createElementNS('http://www.w3.org/2000/svg', 'line')
       el.setAttribute('x1', String(line.x1))
       el.setAttribute('y1', String(line.y1))
       el.setAttribute('x2', String(line.x2))
       el.setAttribute('y2', String(line.y2))
-      el.setAttribute('stroke', line.type === 'row' ? 'hsl(var(--s) / 0.5)' : 'hsl(var(--a) / 0.5)')
+      el.setAttribute('stroke', line.type === 'row' ? `oklch(${rowColor} / 0.6)` : `oklch(${colColor} / 0.6)`)
       el.setAttribute('stroke-width', '2')
       if (line.dashed)
         el.setAttribute('stroke-dasharray', '6 4')

@@ -15,19 +15,15 @@ export function PinNode(props: PinNodeProps) {
     e.stopPropagation()
 
     if (e.ctrlKey || e.metaKey) {
-      // Ctrl+click: always additive select
       selectItem(props.pin.id, true)
     }
     else if (props.selected) {
-      // Already selected: start drag
       props.onDragStart?.(e.clientX, e.clientY)
     }
     else if (hasSelectedKeys()) {
-      // Plain-click with keys selected: connect those keys to this pin
       connectSelectedToPin(props.pin.id)
     }
     else {
-      // No keys selected: select this pin
       selectItem(props.pin.id, false)
     }
   }
