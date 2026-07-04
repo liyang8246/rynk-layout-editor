@@ -315,13 +315,6 @@ export function Canvas() {
           }}
         />
 
-        {/* Wiring lines SVG overlay */}
-        <svg
-          ref={svgRef}
-          class="pointer-events-none absolute inset-0"
-          style={{ width: '100%', height: '100%' }}
-        />
-
         {/* Keys */}
         <For each={state.keys}>
           {key => (
@@ -354,6 +347,13 @@ export function Canvas() {
             />
           )}
         </For>
+
+        {/* Wiring lines SVG overlay (after keys so lines render on top) */}
+        <svg
+          ref={svgRef}
+          class="pointer-events-none absolute inset-0"
+          style={{ width: '100%', height: '100%' }}
+        />
 
         {/* Rubber-band selection rectangle */}
         <Show when={rubberBandRect()}>
