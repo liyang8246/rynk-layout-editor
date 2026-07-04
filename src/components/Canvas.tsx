@@ -43,7 +43,8 @@ export function Canvas() {
   const [rubberBand, setRubberBand] = createSignal<RubberBandState | null>(null)
   const [canvasDrag, setCanvasDrag] = createSignal<CanvasDragState | null>(null)
   let canvasRef!: HTMLDivElement
-  let svgRef!: SVGSVGElement
+  let svgBgRef!: SVGSVGElement
+  let svgFgRef!: SVGSVGElement
 
   const getCanvasPos = (e: MouseEvent) => {
     const rect = canvasRef.getBoundingClientRect()
@@ -242,17 +243,18 @@ export function Canvas() {
   // namespace issues and ensures lines update reactively.
 
   createEffect(() => {
-    const svg = svgRef
+    const svgBg = svgBgRef
+    const svgFg = svgFgRef
     const canvas = canvasRef
-    if (!svg || !canvas) return
+    if (!svgBg || !svgFg || !canvas) return
 
     const lines = wiringLines()
 
-    // Clear previous lines
-    while (svg.firstChild)
-      svg.removeChild(svg.firstChild)
-
-    if (lines.length === 0) return
+    if (lines.length === 0) {
+      while (svgBg.firstChild) svgBg.removeChild(svgBg.firstChild)
+      while (svgFg.firstChild) svgFg.removeChild(svgFg.firstChild)
+      return
+    }
 
     // Resolve daisyUI semantic colors to computed rgb values via a temp HTML element
     const resolveColor = (cls: string): string => {
@@ -269,8 +271,7 @@ export function Canvas() {
     const rowColor = resolveColor('bg-secondary')
     const colColor = resolveColor('bg-accent')
 
-    // Draw non-highlighted lines first, then highlighted lines on top
-    const drawLine = (line: WireLine) => {
+    const makeLineEl = (line: WireLine) => {
       const el = document.createElementNS('http://www.w3.org/2000/svg', 'line')
       el.setAttribute('x1', String(line.x1))
       el.setAttribute('y1', String(line.y1))
@@ -280,14 +281,19 @@ export function Canvas() {
       el.setAttribute('stroke-opacity', line.highlighted ? '1' : '0.4')
       el.setAttribute('stroke-width', line.highlighted ? '3' : '2')
       el.setAttribute('stroke-dasharray', '6 4')
-      svg.appendChild(el)
+      return el
     }
 
+    // bg SVG: non-highlighted lines (behind keys)
+    while (svgBgRef.firstChild) svgBgRef.removeChild(svgBgRef.firstChild)
     for (const line of lines) {
-      if (!line.highlighted) drawLine(line)
+      if (!line.highlighted) svgBgRef.appendChild(makeLineEl(line))
     }
+
+    // fg SVG: highlighted lines (on top of keys)
+    while (svgFgRef.firstChild) svgFgRef.removeChild(svgFgRef.firstChild)
     for (const line of lines) {
-      if (line.highlighted) drawLine(line)
+      if (line.highlighted) svgFgRef.appendChild(makeLineEl(line))
     }
   })
 
@@ -313,6 +319,13 @@ export function Canvas() {
             `,
             'background-size': `${KEY_UNIT * 5}px ${KEY_UNIT * 5}px`,
           }}
+        />
+
+        {/* Wiring lines SVG — background (non-highlighted, behind keys) */}
+        <svg
+          ref={svgBgRef}
+          class="pointer-events-none absolute inset-0"
+          style={{ width: '100%', height: '100%' }}
         />
 
         {/* Keys */}
@@ -348,9 +361,9 @@ export function Canvas() {
           )}
         </For>
 
-        {/* Wiring lines SVG overlay (after keys so lines render on top) */}
+        {/* Wiring lines SVG — foreground (highlighted, on top of keys) */}
         <svg
-          ref={svgRef}
+          ref={svgFgRef}
           class="pointer-events-none absolute inset-0"
           style={{ width: '100%', height: '100%' }}
         />
