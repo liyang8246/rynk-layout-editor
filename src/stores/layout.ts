@@ -1,15 +1,16 @@
 import { nanoid } from 'nanoid'
-import { createSignal, onCleanup } from 'solid-js'
+import { createMemo, createSignal, onCleanup } from 'solid-js'
 import { createStore, produce } from 'solid-js/store'
+import { parseKleJson } from '../utils/kle-import'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-/** L-shape secondary rectangle (KLE convention: offsets from primary top-left) */
+/** L-shape secondary rectangle (Rynk convention: x2/y2 are center-offsets from primary center to secondary center) */
 export interface LShape {
-  x2: number
-  y2: number
-  w2: number
-  h2: number
+  x2: number // offset from primary center to secondary center (X)
+  y2: number // offset from primary center to secondary center (Y)
+  w2: number // secondary rect width
+  h2: number // secondary rect height
 }
 
 /** A single key cap on the layout canvas */
@@ -51,6 +52,15 @@ export type CanvasItem
     | { type: 'encoder', data: EncoderData }
     | { type: 'pin', data: PinData }
 
+/** A layout variant overlay (e.g., ANSI vs ISO) */
+export interface VariantData {
+  id: string
+  name: string
+  hiddenKeys: [number, number][]  // matrix positions [row, col] of hidden keys
+  shapeOverrides: Record<string, { w?: number, h?: number, r?: number, lshape?: LShape }>
+  // key format for shapeOverrides: "row,col" string
+}
+
 /** Complete layout state */
 export interface LayoutState {
   keys: KeyData[]
@@ -59,6 +69,8 @@ export interface LayoutState {
   matrixRows: number
   matrixCols: number
   selectedIds: string[]
+  variants: VariantData[]
+  activeVariantIndex: number // -1 = base layout (no variant active)
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -83,6 +95,8 @@ const [state, setState] = createStore<LayoutState>({
   matrixRows: 5,
   matrixCols: 15,
   selectedIds: [],
+  variants: [],
+  activeVariantIndex: -1,
 })
 
 export { setState, state }
@@ -379,6 +393,21 @@ export function autoNumberMatrix(): void {
   setMatrixSize(sortedRows.length, maxCol)
 }
 
+/** Import a KLE JSON layout, replacing the current state */
+export function importKleJson(json: string): void {
+  const result = parseKleJson(json)
+  setState({
+    keys: result.keys,
+    encoders: result.encoders,
+    pins: [], // KLE doesn't have pin info
+    matrixRows: result.matrixRows,
+    matrixCols: result.matrixCols,
+    selectedIds: [],
+    variants: result.variants,
+    activeVariantIndex: -1,
+  })
+}
+
 /** Toggle L-shape on a key */
 export function toggleLShape(id: string): void {
   const key = state.keys.find(k => k.id === id)
@@ -386,6 +415,178 @@ export function toggleLShape(id: string): void {
   if (key.lshape) updateKey(id, { lshape: undefined })
   else updateKey(id, { lshape: { x2: 0, y2: 0, w2: key.w, h2: key.h } })
 }
+
+// ── Variant actions ─────────────────────────────────────────────────────────────
+
+/** Get the currently active variant, or null if viewing base layout */
+export function activeVariant(): VariantData | null {
+  if (state.activeVariantIndex < 0 || state.activeVariantIndex >= state.variants.length) return null
+  return state.variants[state.activeVariantIndex]
+}
+
+/** Add a new variant */
+export function addVariant(name: string): void {
+  const id = nanoid()
+  setState('variants', prev => [...prev, { id, name, hiddenKeys: [], shapeOverrides: {} }])
+}
+
+/** Delete a variant by id */
+export function deleteVariant(id: string): void {
+  const idx = state.variants.findIndex(v => v.id === id)
+  if (idx === -1) return
+  setState('variants', prev => prev.filter(v => v.id !== id))
+  // Adjust active index if needed
+  if (state.activeVariantIndex >= state.variants.length) {
+    setState('activeVariantIndex', Math.max(-1, state.variants.length - 1))
+  }
+}
+
+/** Rename a variant */
+export function renameVariant(id: string, name: string): void {
+  const idx = state.variants.findIndex(v => v.id === id)
+  if (idx === -1) return
+  setState('variants', idx, 'name', name)
+}
+
+/** Set the active variant index (-1 for base) */
+export function setActiveVariant(index: number): void {
+  setState('activeVariantIndex', index)
+}
+
+/** Toggle whether a key (by matrix position) is hidden in the active variant */
+export function toggleKeyHidden(row: number, col: number): void {
+  const variant = activeVariant()
+  if (!variant) return
+  const idx = state.variants.findIndex(v => v.id === variant.id)
+  if (idx === -1) return
+
+  const existingIdx = variant.hiddenKeys.findIndex(([r, c]) => r === row && c === col)
+
+  if (existingIdx !== -1) {
+    // Un-hide
+    setState('variants', idx, 'hiddenKeys', prev => prev.filter(([r, c]) => r !== row || c !== col) as [number, number][])
+  } else {
+    // Hide
+    setState('variants', idx, 'hiddenKeys', prev => [...prev, [row, col] as [number, number]])
+  }
+}
+
+/** Set a shape override for a key (by matrix position) in the active variant */
+export function setShapeOverride(row: number, col: number, overrides: { w?: number, h?: number, r?: number, lshape?: LShape }): void {
+  const variant = activeVariant()
+  if (!variant) return
+  const idx = state.variants.findIndex(v => v.id === variant.id)
+  if (idx === -1) return
+
+  const key = `${row},${col}`
+  setState('variants', idx, 'shapeOverrides', key, overrides)
+}
+
+/** Clear a shape override for a key in the active variant */
+export function clearShapeOverride(row: number, col: number): void {
+  const variant = activeVariant()
+  if (!variant) return
+  const idx = state.variants.findIndex(v => v.id === variant.id)
+  if (idx === -1) return
+
+  const key = `${row},${col}`
+  // Remove the key from shapeOverrides
+  setState('variants', idx, 'shapeOverrides', (prev) => {
+    const next = { ...prev }
+    delete next[key]
+    return next
+  })
+}
+
+/** Remove a single field from a shape override for a key in the active variant */
+export function removeShapeOverrideField(row: number, col: number, field: 'w' | 'h' | 'r' | 'lshape'): void {
+  const variant = activeVariant()
+  if (!variant) return
+  const idx = state.variants.findIndex(v => v.id === variant.id)
+  if (idx === -1) return
+
+  const key = `${row},${col}`
+  const existing = variant.shapeOverrides[key]
+  if (!existing) return
+
+  const updated = { ...existing }
+  delete (updated as any)[field]
+  // If no fields remain, remove the whole override
+  if (Object.keys(updated).length === 0) {
+    setState('variants', idx, 'shapeOverrides', (prev) => {
+      const next = { ...prev }
+      delete next[key]
+      return next
+    })
+  }
+  else {
+    setState('variants', idx, 'shapeOverrides', key, updated)
+  }
+}
+
+/** Check if a key (by matrix position) is hidden in the active variant */
+export function isKeyHiddenInVariant(row: number, col: number): boolean {
+  const variant = activeVariant()
+  if (!variant) return false
+  return variant.hiddenKeys.some(([r, c]) => r === row && c === col)
+}
+
+/** Get effective key data for a key in the active variant (applying shape overrides) */
+export function getEffectiveKey(key: KeyData): KeyData {
+  const variant = activeVariant()
+  if (!variant || key.row < 0 || key.col < 0) return key
+
+  const overrideKey = `${key.row},${key.col}`
+  const override = variant.shapeOverrides[overrideKey]
+  if (!override) return key
+
+  return {
+    ...key,
+    ...(override.w !== undefined ? { w: override.w } : {}),
+    ...(override.h !== undefined ? { h: override.h } : {}),
+    ...(override.r !== undefined ? { r: override.r } : {}),
+    ...(override.lshape !== undefined ? { lshape: override.lshape } : {}),
+  }
+}
+
+/** Compute display positions for all keys considering active variant reflow.
+ *  Hidden keys cause subsequent keys in the same row to shift left. */
+export const variantDisplayMap = createMemo(() => {
+  const variant = activeVariant()
+  if (!variant) return null // null = use raw positions (no variant active)
+
+  const hiddenSet = new Set(variant.hiddenKeys.map(([r, c]) => `${r},${c}`))
+  const displayMap = new Map<string, { displayX: number, displayY: number }>()
+
+  // Group keys by approximate y (rows)
+  const sorted = [...state.keys].sort((a, b) => a.y - b.y || a.x - b.x)
+  const rows: KeyData[][] = []
+  for (const key of sorted) {
+    const existingRow = rows.find(row => Math.abs(row[0].y - key.y) < 0.5)
+    if (existingRow) existingRow.push(key)
+    else rows.push([key])
+  }
+
+  // For each row, compute reflow
+  for (const row of rows) {
+    const sortedRow = [...row].sort((a, b) => a.x - b.x)
+    let shift = 0
+    for (const key of sortedRow) {
+      const keyCoord = `${key.row},${key.col}`
+      if (hiddenSet.has(keyCoord)) {
+        // This key is hidden — add its BASE width to the shift accumulator.
+        // Hidden keys shouldn't use overridden width since they're invisible;
+        // the shift represents the space the base key occupied.
+        shift += key.w
+      } else {
+        // Visible key — apply accumulated shift
+        displayMap.set(key.id, { displayX: key.x - shift, displayY: key.y })
+      }
+    }
+  }
+
+  return displayMap
+})
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 

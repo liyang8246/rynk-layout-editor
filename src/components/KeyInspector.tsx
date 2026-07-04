@@ -1,9 +1,15 @@
 import type { EncoderData, KeyData, PinData } from '../stores/layout'
 import { Show } from 'solid-js'
 import {
+  activeVariant,
+  clearShapeOverride,
+  isKeyHiddenInVariant,
+  removeShapeOverrideField,
   selectedEncoder,
   selectedKey,
   selectedPin,
+  setShapeOverride,
+  toggleKeyHidden,
   toggleLShape,
   updateEncoder,
   updateKey,
@@ -43,6 +49,12 @@ export function KeyInspector() {
 
 function KeyPanel(props: { keyData: KeyData }) {
   const k = () => props.keyData
+  const variant = () => activeVariant()
+  const hasValidMatrix = () => k().row >= 0 && k().col >= 0
+
+  const overrideKey = () => `${k().row},${k().col}`
+  const shapeOverride = () => variant()?.shapeOverrides[overrideKey()]
+  const hasOverride = () => !!shapeOverride()
 
   return (
     <fieldset class="fieldset">
@@ -210,6 +222,100 @@ function KeyPanel(props: { keyData: KeyData }) {
             </label>
           </div>
         </div>
+
+        {/* Variant Overrides */}
+        <Show when={variant() && hasValidMatrix()}>
+          <div class="flex flex-col gap-2 mt-2 pt-2 border-t border-base-300">
+            <div class="flex items-center gap-2">
+              <span class="fieldset-legend text-sm">Variant Overrides</span>
+              <span class="badge badge-xs badge-warning">{variant()?.name}</span>
+            </div>
+
+            {/* Hidden toggle */}
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                class="toggle toggle-xs toggle-error"
+                checked={isKeyHiddenInVariant(k().row, k().col)}
+                onChange={() => toggleKeyHidden(k().row, k().col)}
+              />
+              <span class="text-xs text-base-content/60">Hidden in variant</span>
+            </label>
+
+            {/* Shape override fields — only when not hidden */}
+            <Show when={!isKeyHiddenInVariant(k().row, k().col)}>
+              <div class="flex flex-col gap-1">
+                <span class="text-xs font-semibold text-base-content/70">Shape Override</span>
+                <div class="grid grid-cols-3 gap-1">
+                  <label class="input input-xs input-bordered flex items-center gap-1">
+                    <span class="text-xs text-base-content/60 w-4">W</span>
+                    <input
+                      type="number"
+                      step="0.25"
+                      min="0.25"
+                      class="grow"
+                      placeholder={String(k().w)}
+                      value={shapeOverride()?.w ?? ''}
+                      onInput={e => {
+                        const val = e.currentTarget.value
+                        const num = val === '' ? undefined : Number.parseFloat(val)
+                        if (num !== undefined && !Number.isNaN(num))
+                          setShapeOverride(k().row, k().col, { w: num })
+                        else if (val === '')
+                          removeShapeOverrideField(k().row, k().col, 'w')
+                      }}
+                    />
+                  </label>
+                  <label class="input input-xs input-bordered flex items-center gap-1">
+                    <span class="text-xs text-base-content/60 w-4">H</span>
+                    <input
+                      type="number"
+                      step="0.25"
+                      min="0.25"
+                      class="grow"
+                      placeholder={String(k().h)}
+                      value={shapeOverride()?.h ?? ''}
+                      onInput={e => {
+                        const val = e.currentTarget.value
+                        const num = val === '' ? undefined : Number.parseFloat(val)
+                        if (num !== undefined && !Number.isNaN(num))
+                          setShapeOverride(k().row, k().col, { h: num })
+                        else if (val === '')
+                          removeShapeOverrideField(k().row, k().col, 'h')
+                      }}
+                    />
+                  </label>
+                  <label class="input input-xs input-bordered flex items-center gap-1">
+                    <span class="text-xs text-base-content/60 w-4">R</span>
+                    <input
+                      type="number"
+                      step="1"
+                      class="grow"
+                      placeholder={String(k().r)}
+                      value={shapeOverride()?.r ?? ''}
+                      onInput={e => {
+                        const val = e.currentTarget.value
+                        const num = val === '' ? undefined : Number.parseFloat(val)
+                        if (num !== undefined && !Number.isNaN(num))
+                          setShapeOverride(k().row, k().col, { r: num })
+                        else if (val === '')
+                          removeShapeOverrideField(k().row, k().col, 'r')
+                      }}
+                    />
+                  </label>
+                </div>
+                <Show when={hasOverride()}>
+                  <button
+                    class="btn btn-xs btn-ghost"
+                    onClick={() => clearShapeOverride(k().row, k().col)}
+                  >
+                    Reset
+                  </button>
+                </Show>
+              </div>
+            </Show>
+          </div>
+        </Show>
       </div>
     </fieldset>
   )

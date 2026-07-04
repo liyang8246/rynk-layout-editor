@@ -2,13 +2,16 @@ import { createEffect, createMemo, createSignal, For, Show } from 'solid-js'
 import {
   deselectAll,
   endItemDrag,
+  getEffectiveKey,
   isDragging,
+  isKeyHiddenInVariant,
   KEY_UNIT,
   pxToUnit,
   selectItemsInRect,
   startItemDrag,
   state,
   updateItemDrag,
+  variantDisplayMap,
 } from '../stores/layout'
 import { EncoderKnob } from './EncoderKnob'
 import { KeyCap } from './KeyCap'
@@ -335,6 +338,9 @@ export function Canvas() {
               key={key}
               selected={state.selectedIds.includes(key.id)}
               onDragStart={handleDragStart}
+              ghost={isKeyHiddenInVariant(key.row, key.col)}
+              effectiveKey={getEffectiveKey(key)}
+              displayPos={variantDisplayMap()?.get(key.id) ?? null}
             />
           )}
         </For>
