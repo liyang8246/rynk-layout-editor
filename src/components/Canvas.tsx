@@ -1,4 +1,4 @@
-import { createSignal, For, Show } from 'solid-js'
+import { createEffect, createMemo, createSignal, For, Show } from 'solid-js'
 import {
   deselectAll,
   endItemDrag,
@@ -30,10 +30,20 @@ interface CanvasDragState {
   canvasRef: HTMLDivElement
 }
 
+interface WireLine {
+  x1: number
+  y1: number
+  x2: number
+  y2: number
+  type: 'row' | 'col'
+  dashed: boolean
+}
+
 export function Canvas() {
   const [rubberBand, setRubberBand] = createSignal<RubberBandState | null>(null)
   const [canvasDrag, setCanvasDrag] = createSignal<CanvasDragState | null>(null)
   let canvasRef!: HTMLDivElement
+  let svgRef!: SVGSVGElement
 
   const getCanvasPos = (e: MouseEvent) => {
     const rect = canvasRef.getBoundingClientRect()
@@ -130,15 +140,18 @@ export function Canvas() {
     return { left, top, width, height }
   }
 
-  const wiringLines = () => {
-    const lines: { x1: number, y1: number, x2: number, y2: number, type: 'row' | 'col', dashed: boolean }[] = []
+  // ── Wiring lines computation ───────────────────────────────────────────────
 
-    // Build pin lookup maps
+  const wiringLines = createMemo((): WireLine[] => {
+    const lines: WireLine[] = []
+
     const rowPins = new Map<number, { x: number, y: number }>()
     const colPins = new Map<number, { x: number, y: number }>()
     for (const pin of state.pins) {
-      if (pin.direction === 'row') rowPins.set(pin.index, { x: pin.x, y: pin.y })
-      else colPins.set(pin.index, { x: pin.x, y: pin.y })
+      if (pin.direction === 'row')
+        rowPins.set(pin.index, { x: pin.x, y: pin.y })
+      else
+        colPins.set(pin.index, { x: pin.x, y: pin.y })
     }
 
     for (const key of state.keys) {
@@ -178,7 +191,36 @@ export function Canvas() {
     }
 
     return lines
-  }
+  })
+
+  // ── SVG wiring overlay — imperative DOM update via createEffect ────────────
+  // Using createEffect + direct SVG DOM manipulation avoids SolidJS <For>-in-SVG
+  // namespace issues and ensures lines update reactively.
+
+  createEffect(() => {
+    const svg = svgRef
+    if (!svg) return
+
+    const lines = wiringLines()
+
+    // Clear previous lines
+    while (svg.firstChild)
+      svg.removeChild(svg.firstChild)
+
+    // Draw new lines
+    for (const line of lines) {
+      const el = document.createElementNS('http://www.w3.org/2000/svg', 'line')
+      el.setAttribute('x1', String(line.x1))
+      el.setAttribute('y1', String(line.y1))
+      el.setAttribute('x2', String(line.x2))
+      el.setAttribute('y2', String(line.y2))
+      el.setAttribute('stroke', line.type === 'row' ? 'hsl(var(--s) / 0.5)' : 'hsl(var(--a) / 0.5)')
+      el.setAttribute('stroke-width', '2')
+      if (line.dashed)
+        el.setAttribute('stroke-dasharray', '6 4')
+      svg.appendChild(el)
+    }
+  })
 
   return (
     <div class="flex-1 overflow-auto bg-base-100 p-4">
@@ -204,25 +246,12 @@ export function Canvas() {
           }}
         />
 
-        {/* Wiring lines */}
+        {/* Wiring lines SVG overlay */}
         <svg
+          ref={svgRef}
           class="pointer-events-none absolute inset-0"
           style={{ width: '100%', height: '100%' }}
-        >
-          <For each={wiringLines()}>
-            {line => (
-              <line
-                x1={line.x1}
-                y1={line.y1}
-                x2={line.x2}
-                y2={line.y2}
-                stroke={line.type === 'row' ? 'hsl(var(--s) / 0.5)' : 'hsl(var(--a) / 0.5)'}
-                stroke-width="2"
-                stroke-dasharray={line.dashed ? '6 4' : 'none'}
-              />
-            )}
-          </For>
-        </svg>
+        />
 
         {/* Keys */}
         <For each={state.keys}>
