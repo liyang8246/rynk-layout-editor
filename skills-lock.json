@@ -6,6 +6,12 @@
       "sourceType": "github",
       "skillPath": "skills/daisyui/SKILL.md",
       "computedHash": "cdf8b102133d097ef4cdf1b315bbddc50c340da1d43521bdfcef9b126ed44a5b"
+    },
+    "solidjs": {
+      "source": "liyang8246/skills",
+      "sourceType": "github",
+      "skillPath": "skills/solidjs/SKILL.md",
+      "computedHash": "065c7bbbded8c71d9eed277463e709d881c668a97e67bf517e4188f86ff1b0ef"
     }
   }
 }
