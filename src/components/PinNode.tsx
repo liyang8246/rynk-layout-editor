@@ -67,7 +67,7 @@ export function PinNode(props: PinNodeProps) {
           bottom: `${FACE_GAP}px`,
         }}
       >
-        <span class="text-xs font-bold text-secondary select-none">
+        <span class="text-xs font-bold text-secondary-content select-none">
           {label()}
         </span>
       </div>

@@ -145,6 +145,7 @@ export function Canvas() {
   const wiringLines = createMemo((): WireLine[] => {
     const lines: WireLine[] = []
 
+    // Build pin lookup maps
     const rowPins = new Map<number, { x: number, y: number }>()
     const colPins = new Map<number, { x: number, y: number }>()
     for (const pin of state.pins) {
@@ -154,39 +155,126 @@ export function Canvas() {
         colPins.set(pin.index, { x: pin.x, y: pin.y })
     }
 
+    // Group keys by row pin index and col pin index
+    const keysByRow = new Map<number, { x: number, y: number }[]>()
+    const keysByCol = new Map<number, { x: number, y: number }[]>()
     for (const key of state.keys) {
-      const kx = key.x * KEY_UNIT
-      const ky = key.y * KEY_UNIT
-      const hasRow = key.row >= 0
-      const hasCol = key.col >= 0
-      const fullyWired = hasRow && hasCol
-
-      if (hasRow) {
-        const pin = rowPins.get(key.row)
-        if (pin) {
-          lines.push({
-            x1: kx,
-            y1: ky,
-            x2: pin.x * KEY_UNIT,
-            y2: pin.y * KEY_UNIT,
-            type: 'row',
-            dashed: !fullyWired,
-          })
+      if (key.row >= 0) {
+        let group = keysByRow.get(key.row)
+        if (!group) {
+          group = []
+          keysByRow.set(key.row, group)
         }
+        group.push({ x: key.x * KEY_UNIT, y: key.y * KEY_UNIT })
       }
-
-      if (hasCol) {
-        const pin = colPins.get(key.col)
-        if (pin) {
-          lines.push({
-            x1: kx,
-            y1: ky,
-            x2: pin.x * KEY_UNIT,
-            y2: pin.y * KEY_UNIT,
-            type: 'col',
-            dashed: !fullyWired,
-          })
+      if (key.col >= 0) {
+        let group = keysByCol.get(key.col)
+        if (!group) {
+          group = []
+          keysByCol.set(key.col, group)
         }
+        group.push({ x: key.x * KEY_UNIT, y: key.y * KEY_UNIT })
+      }
+    }
+
+    // For each row pin: chain Pin → nearest key → next nearest → ...
+    for (const [rowIdx, keys] of keysByRow) {
+      const pin = rowPins.get(rowIdx)
+      if (!pin) continue
+      const px = pin.x * KEY_UNIT
+      const py = pin.y * KEY_UNIT
+      const fullyWired = keysByCol.has(rowIdx) // approximation: has col assignments too
+
+      // Sort keys by distance from pin, then chain nearest-neighbor
+      const sorted = [...keys].sort((a, b) => {
+        const da = (a.x - px) ** 2 + (a.y - py) ** 2
+        const db = (b.x - px) ** 2 + (b.y - py) ** 2
+        return da - db
+      })
+
+      // Pin → first key
+      lines.push({
+        x1: px,
+        y1: py,
+        x2: sorted[0].x,
+        y2: sorted[0].y,
+        type: 'row',
+        dashed: !fullyWired,
+      })
+
+      // Each key → next nearest key (chain)
+      for (let i = 0; i < sorted.length - 1; i++) {
+        const current = sorted[i]
+        // Find nearest unvisited key from current
+        let bestDist = Infinity
+        let bestIdx = i + 1
+        for (let j = i + 1; j < sorted.length; j++) {
+          const d = (sorted[j].x - current.x) ** 2 + (sorted[j].y - current.y) ** 2
+          if (d < bestDist) {
+            bestDist = d
+            bestIdx = j
+          }
+        }
+        // Swap to maintain order
+        if (bestIdx !== i + 1) {
+          [sorted[i + 1], sorted[bestIdx]] = [sorted[bestIdx], sorted[i + 1]]
+        }
+        lines.push({
+          x1: current.x,
+          y1: current.y,
+          x2: sorted[i + 1].x,
+          y2: sorted[i + 1].y,
+          type: 'row',
+          dashed: !fullyWired,
+        })
+      }
+    }
+
+    // For each col pin: same chain logic
+    for (const [colIdx, keys] of keysByCol) {
+      const pin = colPins.get(colIdx)
+      if (!pin) continue
+      const px = pin.x * KEY_UNIT
+      const py = pin.y * KEY_UNIT
+      const fullyWired = keysByRow.has(colIdx)
+
+      const sorted = [...keys].sort((a, b) => {
+        const da = (a.x - px) ** 2 + (a.y - py) ** 2
+        const db = (b.x - px) ** 2 + (b.y - py) ** 2
+        return da - db
+      })
+
+      lines.push({
+        x1: px,
+        y1: py,
+        x2: sorted[0].x,
+        y2: sorted[0].y,
+        type: 'col',
+        dashed: !fullyWired,
+      })
+
+      for (let i = 0; i < sorted.length - 1; i++) {
+        const current = sorted[i]
+        let bestDist = Infinity
+        let bestIdx = i + 1
+        for (let j = i + 1; j < sorted.length; j++) {
+          const d = (sorted[j].x - current.x) ** 2 + (sorted[j].y - current.y) ** 2
+          if (d < bestDist) {
+            bestDist = d
+            bestIdx = j
+          }
+        }
+        if (bestIdx !== i + 1) {
+          [sorted[i + 1], sorted[bestIdx]] = [sorted[bestIdx], sorted[i + 1]]
+        }
+        lines.push({
+          x1: current.x,
+          y1: current.y,
+          x2: sorted[i + 1].x,
+          y2: sorted[i + 1].y,
+          type: 'col',
+          dashed: !fullyWired,
+        })
       }
     }
 
