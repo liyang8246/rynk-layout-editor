@@ -19,6 +19,15 @@
       "path": ".slim/clonedeps/repos/ijprest__keyboard-layout-editor",
       "packagePath": "",
       "reason": "Source input format — KLE JSON schema, key metadata, and rendering reference"
+    },
+    {
+      "name": "daisyui",
+      "resolvedVersion": "5.6.13",
+      "repoUrl": "https://github.com/saadeghi/daisyui.git",
+      "ref": "v5.6.13",
+      "path": ".slim/clonedeps/repos/saadeghi__daisyui",
+      "packagePath": "",
+      "reason": "Component styling reference — ensure custom components match daisyUI style and theme compatibility"
     }
   ]
 }
