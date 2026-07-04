@@ -9,7 +9,7 @@ interface EncoderKnobProps {
 export function EncoderKnob(props: EncoderKnobProps) {
   const handleClick = (e: MouseEvent) => {
     e.stopPropagation()
-    selectItem(props.encoder.id, e.shiftKey)
+    selectItem(props.encoder.id, e.ctrlKey || e.metaKey)
   }
 
   return (

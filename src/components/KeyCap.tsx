@@ -10,7 +10,7 @@ interface KeyCapProps {
 export function KeyCap(props: KeyCapProps) {
   const handleClick = (e: MouseEvent) => {
     e.stopPropagation()
-    selectItem(props.key.id, e.shiftKey)
+    selectItem(props.key.id, e.ctrlKey || e.metaKey)
   }
 
   return (

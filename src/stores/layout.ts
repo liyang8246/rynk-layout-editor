@@ -138,6 +138,37 @@ export function deselectAll(): void {
   setState('selectedIds', [])
 }
 
+/** Select all items whose bounding box overlaps the given rectangle (in key units) */
+export function selectItemsInRect(x1: number, y1: number, x2: number, y2: number, additive: boolean): void {
+  const left = Math.min(x1, x2)
+  const right = Math.max(x1, x2)
+  const top = Math.min(y1, y2)
+  const bottom = Math.max(y1, y2)
+
+  const ids: string[] = []
+
+  for (const key of state.keys) {
+    const kx1 = key.x - key.w / 2
+    const ky1 = key.y - key.h / 2
+    const kx2 = key.x + key.w / 2
+    const ky2 = key.y + key.h / 2
+    if (kx2 > left && kx1 < right && ky2 > top && ky1 < bottom)
+      ids.push(key.id)
+  }
+
+  for (const enc of state.encoders) {
+    const ex1 = enc.x - 0.5
+    const ey1 = enc.y - 0.5
+    const ex2 = enc.x + 0.5
+    const ey2 = enc.y + 0.5
+    if (ex2 > left && ex1 < right && ey2 > top && ey1 < bottom)
+      ids.push(enc.id)
+  }
+
+  if (additive) setState('selectedIds', prev => [...new Set([...prev, ...ids])])
+  else setState('selectedIds', ids)
+}
+
 /** Move selected items by delta */
 export function moveSelected(dx: number, dy: number): void {
   const ids = new Set(state.selectedIds)
