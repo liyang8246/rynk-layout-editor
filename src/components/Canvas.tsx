@@ -180,7 +180,8 @@ export function Canvas() {
         const dy = cy - key.ry
         px = (key.rx + dx * Math.cos(rad) - dy * Math.sin(rad)) * KEY_UNIT
         py = (key.ry + dx * Math.sin(rad) + dy * Math.cos(rad)) * KEY_UNIT
-      } else {
+      }
+      else {
         px = cx * KEY_UNIT
         py = cy * KEY_UNIT
       }

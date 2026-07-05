@@ -26,7 +26,7 @@ export interface KeyData {
   lshape?: LShape // omit for non-L keys
   row: number // matrix row (-1 = unassigned)
   col: number // matrix col (-1 = unassigned)
-  option?: { groupId: number; choiceId: number } // layout variant group/choice
+  option?: { groupId: number, choiceId: number } // layout variant group/choice
 }
 
 /** An encoder knob on the layout canvas */
@@ -41,7 +41,7 @@ export interface EncoderData {
 export interface OptionGroup {
   id: number
   name: string
-  choices: { id: number; name: string }[]
+  choices: { id: number, name: string }[]
 }
 
 /** Pin direction: row or column */
@@ -175,7 +175,7 @@ export function redo(): void {
   updateUndoRedoSignals()
 }
 
-export { canUndo, canRedo }
+export { canRedo, canUndo }
 
 // ── Copy/Paste ─────────────────────────────────────────────────────────────────
 
@@ -195,7 +195,7 @@ export function pasteClipboard(): void {
   if (clipboard.keys.length === 0 && clipboard.encoders.length === 0) return
   pushHistory()
   const pastedIds: string[] = []
-  const newKeys = clipboard.keys.map(k => {
+  const newKeys = clipboard.keys.map((k) => {
     const id = nanoid()
     pastedIds.push(id)
     return { ...k, id, x: k.x + 1, y: k.y + 1, option: k.option ? { ...k.option } : undefined }
@@ -601,7 +601,7 @@ export function addOptionGroup(name: string): number {
 export function removeOptionGroup(groupId: number): void {
   pushHistory()
   // Clear option from all keys in this group
-  setState('keys', produce(keys => {
+  setState('keys', produce((keys) => {
     for (const key of keys) {
       if (key.option?.groupId === groupId) key.option = undefined
     }
@@ -683,9 +683,11 @@ export function getItemBounds(id: string): { x: number, y: number, w: number, h:
   return canvasItemBounds(item)
 }
 
-/** Compute bounding box from a CanvasItem (x/y are top-left).
+/**
+ * Compute bounding box from a CanvasItem (x/y are top-left).
  *  Note: for rotated keys, this returns the unrotated axis-aligned bounding box.
- *  Rubber-band selection may be slightly inaccurate for heavily rotated keys. */
+ *  Rubber-band selection may be slightly inaccurate for heavily rotated keys.
+ */
 function canvasItemBounds(item: CanvasItem): { x: number, y: number, w: number, h: number } {
   if (item.type === 'key')
     return { x: item.data.x, y: item.data.y, w: item.data.w, h: item.data.h }

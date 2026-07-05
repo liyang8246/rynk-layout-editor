@@ -1,5 +1,5 @@
 import type { EncoderData, KeyData, PinData } from '../stores/layout'
-import { Show, Switch, Match } from 'solid-js'
+import { Match, Show, Switch } from 'solid-js'
 import {
   removeKeyOption,
   selectedEncoder,
@@ -234,12 +234,17 @@ function KeyPanel(props: { keyData: KeyData }) {
 
         {/* Variant */}
         <Show when={k().option}>
-          {(opt) => (
+          {opt => (
             <div class="flex flex-col gap-1">
               <span class="text-xs font-semibold text-base-content/70">Variant</span>
               <div class="flex items-center gap-2">
                 <span class="text-xs text-base-content/60">
-                  Group {opt().groupId}, Choice {opt().choiceId}
+                  Group
+                  {' '}
+                  {opt().groupId}
+                  , Choice
+                  {' '}
+                  {opt().choiceId}
                 </span>
                 <button class="btn btn-xs btn-ghost text-error" onClick={() => removeKeyOption(k().id)}>
                   Remove

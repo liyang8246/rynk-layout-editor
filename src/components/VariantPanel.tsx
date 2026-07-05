@@ -26,14 +26,14 @@ export function VariantPanel() {
       </Show>
 
       <For each={state.optionGroups}>
-        {(group) => (
+        {group => (
           <div class="bg-base-300/30 rounded-md p-2 flex flex-col gap-1.5">
             <div class="flex items-center gap-1">
               <input
                 type="text"
                 class="input input-xs input-bordered flex-1"
                 value={group.name}
-                onChange={(e) => renameOptionGroup(group.id, e.currentTarget.value)}
+                onChange={e => renameOptionGroup(group.id, e.currentTarget.value)}
               />
               <button class="btn btn-xs btn-ghost btn-circle text-error" onClick={() => removeOptionGroup(group.id)}>✕</button>
             </div>
@@ -41,7 +41,7 @@ export function VariantPanel() {
             {/* Active choice selector */}
             <div class="flex gap-1 flex-wrap">
               <For each={group.choices}>
-                {(choice) => (
+                {choice => (
                   <button
                     class="btn btn-xs"
                     classList={{
@@ -64,11 +64,11 @@ export function VariantPanel() {
 
             {/* Assign selected key to this group/choice */}
             <Show when={selectedKey()}>
-              {(k) => (
+              {k => (
                 <div class="flex gap-1 flex-wrap">
                   <span class="text-xs text-base-content/50">Assign:</span>
                   <For each={group.choices}>
-                    {(choice) => (
+                    {choice => (
                       <button
                         class="btn btn-xs btn-outline"
                         classList={{

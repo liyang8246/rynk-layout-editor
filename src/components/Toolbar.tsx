@@ -175,7 +175,6 @@ export function Toolbar() {
         />
       </label>
 
-
       <div class="flex-1" />
 
       <span class="text-xs text-base-content/60">

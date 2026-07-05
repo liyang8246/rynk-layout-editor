@@ -1,9 +1,9 @@
+import type { KeyData, LayoutState } from '../src/stores/layout'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { parseKleJson } from '../src/utils/kle-import'
 import { exportKleJson } from '../src/utils/kle-export'
-import type { KeyData, LayoutState } from '../src/stores/layout'
+import { parseKleJson } from '../src/utils/kle-import'
 
 // ── Fixtures ────────────────────────────────────────────────────────────────────
 
@@ -48,9 +48,15 @@ function toLayoutState(result: ReturnType<typeof parseKleJson>): LayoutState {
 /** Compare two KeyData arrays by position/shape (ignoring id which is random nanoid) */
 function keySignature(key: KeyData): string {
   const parts = [
-    key.x, key.y, key.w, key.h,
-    key.r, key.rx, key.ry,
-    key.row, key.col,
+    key.x,
+    key.y,
+    key.w,
+    key.h,
+    key.r,
+    key.rx,
+    key.ry,
+    key.row,
+    key.col,
     key.lshape ? `${key.lshape.x2},${key.lshape.y2},${key.lshape.w2},${key.lshape.h2}` : '',
     key.option ? `${key.option.groupId},${key.option.choiceId}` : '',
   ]
@@ -59,7 +65,7 @@ function keySignature(key: KeyData): string {
 
 // ── Tests ───────────────────────────────────────────────────────────────────────
 
-describe('KLE import', () => {
+describe('kLE import', () => {
   for (const name of fixtureNames) {
     it(`parses ${name} without errors`, () => {
       const json = loadFixture(name)
@@ -114,7 +120,7 @@ describe('KLE import', () => {
   })
 })
 
-describe('KLE export', () => {
+describe('kLE export', () => {
   it('produces valid JSON', () => {
     const json = loadFixture('default-60')
     const result = parseKleJson(json)
@@ -140,14 +146,14 @@ describe('KLE export', () => {
     const exported = exportKleJson(state)
     const parsed = JSON.parse(exported) as [Record<string, number>, string][]
     // Keys with row,col assigned should have legend starting with "row,col"
-    const keysWithMatrix = parsed.filter(([, legend]) => /^\d+,\d+/.test(legend))
+    const _keysWithMatrix = parsed.filter(([, legend]) => /^\d+,\d+/.test(legend))
     // Default-60 has no pre-assigned matrix, so row/col are -1 → legend starts empty or with newlines
     // After auto-numbering they'd have values. Let's test with explicit assignment.
     expect(parsed.length).toBeGreaterThan(0)
   })
 })
 
-describe('KLE round-trip (import → export → reimport)', () => {
+describe('kLE round-trip (import → export → reimport)', () => {
   /**
    * Core round-trip test: parse a KLE JSON, export it, reimport the export,
    * and verify the key geometries match.
@@ -196,7 +202,7 @@ describe('KLE round-trip (import → export → reimport)', () => {
   }
 })
 
-describe('KLE double round-trip stability', () => {
+describe('kLE double round-trip stability', () => {
   /** After two round-trips, the result should be identical to one round-trip. */
   for (const name of fixtureNames) {
     it(`is stable after double round-trip for ${name}`, () => {

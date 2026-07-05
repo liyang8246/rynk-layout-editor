@@ -1,6 +1,6 @@
+import type { EncoderData, KeyData, LShape, OptionGroup } from '../stores/layout'
 import { parse as kleParse } from '@liyang8246/kle-serial'
 import { nanoid } from 'nanoid'
-import type { KeyData, EncoderData, LShape, OptionGroup } from '../stores/layout'
 
 export interface KleImportResult {
   keys: KeyData[]
@@ -129,16 +129,16 @@ export function parseKleJson(json: string): KleImportResult {
 
     keys.push({
       id: nanoid(),
-      x: round4(x),                    // top-left X (KLE convention, rounded to 4dp)
-      y: round4(y),                    // top-left Y (KLE convention, rounded to 4dp)
+      x: round4(x), // top-left X (KLE convention, rounded to 4dp)
+      y: round4(y), // top-left Y (KLE convention, rounded to 4dp)
       w: round4(width),
       h: round4(height),
-      r: round4(rotation_angle),       // rotation angle (degrees)
-      rx: round4(rotation_x),          // rotation origin X (KLE convention)
-      ry: round4(rotation_y),          // rotation origin Y (KLE convention)
+      r: round4(rotation_angle), // rotation angle (degrees)
+      rx: round4(rotation_x), // rotation origin X (KLE convention)
+      ry: round4(rotation_y), // rotation origin Y (KLE convention)
       lshape,
-      row,                            // parsed from labels[0] or -1
-      col,                            // parsed from labels[0] or -1
+      row, // parsed from labels[0] or -1
+      col, // parsed from labels[0] or -1
       option,
     })
   }

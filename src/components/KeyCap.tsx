@@ -34,11 +34,11 @@ export function KeyCap(props: KeyCapProps) {
         'cursor-pointer': !props.selected,
       }}
       style={{
-        left: `${props.key.x * KEY_UNIT}px`,
-        top: `${props.key.y * KEY_UNIT}px`,
-        width: `${props.key.w * KEY_UNIT}px`,
-        height: `${props.key.h * KEY_UNIT}px`,
-        transform: `rotate(${props.key.r}deg)`,
+        'left': `${props.key.x * KEY_UNIT}px`,
+        'top': `${props.key.y * KEY_UNIT}px`,
+        'width': `${props.key.w * KEY_UNIT}px`,
+        'height': `${props.key.h * KEY_UNIT}px`,
+        'transform': `rotate(${props.key.r}deg)`,
         'transform-origin': `${((props.key.rx - props.key.x) * KEY_UNIT)}px ${((props.key.ry - props.key.y) * KEY_UNIT)}px`,
       }}
       onPointerDown={handlePointerDown}
@@ -56,7 +56,7 @@ export function KeyCap(props: KeyCapProps) {
 
         {/* L-shape secondary border rect */}
         <Show when={props.key.lshape}>
-          {lshape => {
+          {(lshape) => {
             const ls = lshape()
             return (
               <div
@@ -95,7 +95,7 @@ export function KeyCap(props: KeyCapProps) {
 
       {/* Face layer: L-shape secondary face */}
       <Show when={props.key.lshape}>
-        {lshape => {
+        {(lshape) => {
           const ls = lshape()
           return (
             <div

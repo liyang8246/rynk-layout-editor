@@ -8,8 +8,8 @@
  * key format and let it handle serialization.
  */
 
-import { serializeCompact } from '@liyang8246/kle-serial'
 import type { LayoutState } from '../stores/layout'
+import { serializeCompact } from '@liyang8246/kle-serial'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
