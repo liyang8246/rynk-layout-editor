@@ -8,7 +8,9 @@
     "build": "tsc && vite build",
     "lint": "eslint",
     "lint:fix": "eslint --fix",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@liyang8246/kle-serial": "^0.1.1",
@@ -26,6 +28,7 @@
     "tailwindcss": "^4.3.2",
     "typescript": "~6.0.2",
     "vite": "^8.1.1",
-    "vite-plugin-solid": "^2.11.12"
+    "vite-plugin-solid": "^2.11.12",
+    "vitest": "^4.1.9"
   }
 }

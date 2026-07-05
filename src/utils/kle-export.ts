@@ -1,20 +1,19 @@
 /**
- * KLE JSON export — the internal data model is already KLE-compatible
- * (top-left coordinates, cluster rotation rx/ry, KLE L-shape offsets),
- * so export is a direct mapping.
+ * KLE JSON export — uses @liyang8246/kle-serial's serialize() to produce
+ * correct KLE JSON with proper row grouping, relative coordinates, and
+ * incremental property encoding.
+ *
+ * The internal KeyData model uses KLE conventions (top-left x/y, rx/ry
+ * rotation, x2/y2 L-shape offsets), so we map directly to the library's
+ * key format and let it handle serialization.
  */
 
+import { serialize } from '@liyang8246/kle-serial'
 import type { LayoutState } from '../stores/layout'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-const EPS = 1e-4
-
-function approx(a: number, b: number): boolean {
-  return Math.abs(a - b) < EPS
-}
-
-function round(v: number): number {
+function round4(v: number): number {
   return Math.round(v * 1e4) / 1e4
 }
 
@@ -23,64 +22,157 @@ function round(v: number): number {
 /**
  * Export a LayoutState as a KLE JSON string.
  *
- * Each key is emitted on its own KLE row with absolute positioning.
- * Since the internal model uses KLE conventions (top-left x/y, rx/ry rotation),
- * no coordinate conversion is needed.
+ * Converts internal KeyData/EncoderData to the kle-serial key format,
+ * then uses the library's serialize() for correct KLE output.
  */
 export function exportKleJson(state: LayoutState): string {
-  const rows: unknown[] = []
+  // Build kle-serial compatible key objects from our internal data
+  const kleKeys: KLEKey[] = []
 
   // Emit keys
   for (const key of state.keys) {
-    const props: Record<string, number> = {}
-
-    if (!approx(key.r, 0)) {
-      props.r = round(key.r)
-      props.rx = round(key.rx)
-      props.ry = round(key.ry)
+    const kleKey: KLEKey = {
+      x: key.x,
+      y: key.y,
+      width: key.w,
+      height: key.h,
+      rotation_angle: key.r,
+      rotation_x: key.rx,
+      rotation_y: key.ry,
+      x2: key.lshape?.x2 ?? 0,
+      y2: key.lshape?.y2 ?? 0,
+      width2: key.lshape?.w2 ?? key.w,
+      height2: key.lshape?.h2 ?? key.h,
+      labels: [],
+      textColor: [],
+      textSize: [],
+      color: '#cccccc',
+      profile: '',
+      nub: false,
+      ghost: false,
+      stepped: false,
+      decal: false,
+      sm: '',
+      sb: '',
+      st: '',
+      default: {
+        textColor: '#000000',
+        textSize: 3,
+      },
     }
 
-    props.x = round(key.x)
-    props.y = round(key.y)
-
-    if (!approx(key.w, 1)) props.w = round(key.w)
-    if (!approx(key.h, 1)) props.h = round(key.h)
-
-    // Handle L-shape (already in KLE offset convention)
-    if (key.lshape) {
-      props.x2 = round(key.lshape.x2)
-      props.y2 = round(key.lshape.y2)
-      props.w2 = round(key.lshape.w2)
-      props.h2 = round(key.lshape.h2)
+    // Build labels array from matrix assignment and option annotation
+    // labels[0] = "row,col" if assigned
+    // labels[9] = "groupId,choiceId" if option assigned (Vial convention)
+    const labels: string[] = []
+    if (key.row >= 0 && key.col >= 0) {
+      labels[0] = `${key.row},${key.col}`
     }
-
-    let legend = key.row >= 0 && key.col >= 0 ? `${key.row},${key.col}` : ''
     if (key.option) {
-      // Vial convention: append group,choice as 10th legend field
-      // 9 newlines to reach the 10th field, then groupId,choiceId
-      legend += `\n\n\n\n\n\n\n\n\n${key.option.groupId},${key.option.choiceId}`
+      labels[9] = `${key.option.groupId},${key.option.choiceId}`
     }
-    rows.push([props, legend])
+    kleKey.labels = labels
+
+    kleKeys.push(kleKey)
   }
 
   // Emit encoders — two 1u keys (CCW and CW) side by side
   for (const encoder of state.encoders) {
     // CCW key (direction 0)
-    const ccwProps: Record<string, number> = {
-      x: round(encoder.x),
-      y: round(encoder.y),
-    }
-    const ccwLegend = `${encoder.encoderIndex},0\n\n\n\n\n\n\n\n\ne`
-    rows.push([ccwProps, ccwLegend])
+    kleKeys.push({
+      x: round4(encoder.x),
+      y: round4(encoder.y),
+      width: 1,
+      height: 1,
+      rotation_angle: 0,
+      rotation_x: 0,
+      rotation_y: 0,
+      x2: 0,
+      y2: 0,
+      width2: 1,
+      height2: 1,
+      labels: [`${encoder.encoderIndex},0`, '', '', '', '', '', '', '', '', 'e'],
+      textColor: [],
+      textSize: [],
+      color: '#cccccc',
+      profile: '',
+      nub: false,
+      ghost: false,
+      stepped: false,
+      decal: false,
+      sm: '',
+      sb: '',
+      st: '',
+      default: {
+        textColor: '#000000',
+        textSize: 3,
+      },
+    })
 
     // CW key (direction 1)
-    const cwProps: Record<string, number> = {
-      x: round(encoder.x + 1),
-      y: round(encoder.y),
-    }
-    const cwLegend = `${encoder.encoderIndex},1\n\n\n\n\n\n\n\n\ne`
-    rows.push([cwProps, cwLegend])
+    kleKeys.push({
+      x: round4(encoder.x + 1),
+      y: round4(encoder.y),
+      width: 1,
+      height: 1,
+      rotation_angle: 0,
+      rotation_x: 0,
+      rotation_y: 0,
+      x2: 0,
+      y2: 0,
+      width2: 1,
+      height2: 1,
+      labels: [`${encoder.encoderIndex},1`, '', '', '', '', '', '', '', '', 'e'],
+      textColor: [],
+      textSize: [],
+      color: '#cccccc',
+      profile: '',
+      nub: false,
+      ghost: false,
+      stepped: false,
+      decal: false,
+      sm: '',
+      sb: '',
+      st: '',
+      default: {
+        textColor: '#000000',
+        textSize: 3,
+      },
+    })
   }
 
-  return JSON.stringify(rows, null, 2)
+  // Use kle-serial's serialize to produce the correct KLE JSON structure
+  const serialized = serialize({ meta: {} as any, keys: kleKeys as any })
+  return JSON.stringify(serialized, null, 2)
+}
+
+/** Minimal type matching kle-serial's key output format */
+interface KLEKey {
+  x: number
+  y: number
+  width: number
+  height: number
+  rotation_angle: number
+  rotation_x: number
+  rotation_y: number
+  x2: number
+  y2: number
+  width2: number
+  height2: number
+  labels: string[]
+  textColor: string[]
+  textSize: (number | undefined)[]
+  color: string
+  profile: string
+  nub: boolean
+  ghost: boolean
+  stepped: boolean
+  decal: boolean
+  sm: string
+  sb: string
+  st: string
+  default: {
+    textColor: string
+    textSize: number
+  }
 }

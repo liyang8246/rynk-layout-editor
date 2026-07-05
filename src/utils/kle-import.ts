@@ -13,6 +13,11 @@ export interface KleImportResult {
 
 const EPS = 0.01
 
+/** Round to 4 decimal places (matches kle-serial's roundTo4 convention) */
+function round4(v: number): number {
+  return Math.round(v * 1e4) / 1e4
+}
+
 /**
  * Determine if a KLE key has a genuine L-shape (secondary rect differs from primary).
  * The KLE serial library defaults width2=width and height2=height for every key,
@@ -97,8 +102,8 @@ export function parseKleJson(json: string): KleImportResult {
           encoderKeys.push({
             encoderIndex: Number.parseInt(match[1]),
             direction: Number.parseInt(match[2]),
-            x,
-            y,
+            x: round4(x),
+            y: round4(y),
           })
         }
       }
@@ -108,7 +113,7 @@ export function parseKleJson(json: string): KleImportResult {
     // Handle L-shape — only if secondary rect genuinely differs from primary
     let lshape: LShape | undefined
     if (hasRect2(x2, y2, width2, height2, width, height)) {
-      lshape = { x2, y2, w2: width2, h2: height2 }
+      lshape = { x2: round4(x2), y2: round4(y2), w2: round4(width2), h2: round4(height2) }
       // KLE convention: x2/y2 are offsets from primary top-left to secondary top-left
       // No conversion needed — store as-is
     }
@@ -124,13 +129,13 @@ export function parseKleJson(json: string): KleImportResult {
 
     keys.push({
       id: nanoid(),
-      x,                              // top-left X (KLE convention, no conversion)
-      y,                              // top-left Y (KLE convention, no conversion)
-      w: width,
-      h: height,
-      r: rotation_angle,              // rotation angle (degrees)
-      rx: rotation_x,                 // rotation origin X (KLE convention)
-      ry: rotation_y,                 // rotation origin Y (KLE convention)
+      x: round4(x),                    // top-left X (KLE convention, rounded to 4dp)
+      y: round4(y),                    // top-left Y (KLE convention, rounded to 4dp)
+      w: round4(width),
+      h: round4(height),
+      r: round4(rotation_angle),       // rotation angle (degrees)
+      rx: round4(rotation_x),          // rotation origin X (KLE convention)
+      ry: round4(rotation_y),          // rotation origin Y (KLE convention)
       lshape,
       row,                            // parsed from labels[0] or -1
       col,                            // parsed from labels[0] or -1
