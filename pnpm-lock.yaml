@@ -8,9 +8,9 @@ importers:
 
   .:
     dependencies:
-      '@ijprest/kle-serial':
-        specifier: ^0.15.1
-        version: 0.15.1
+      '@liyang8246/kle-serial':
+        specifier: ^0.1.1
+        version: 0.1.1
       nanoid:
         specifier: ^5.1.16
         version: 5.1.16
@@ -312,9 +312,6 @@ packages:
     resolution: {integrity: sha512-bV0Tgo9K4hfPCek+aMAn81RppFKv2ySDQeMoSZuvTASywNTnVJCArCZE2FWqpvIatKu7VMRLWlR1EazvVhDyhQ==}
     engines: {node: '>=18.18'}
 
-  '@ijprest/kle-serial@0.15.1':
-    resolution: {integrity: sha512-pV4Kn7cU1gw+Pk6OVgvz/K45fKrGhZYlh5M4nfp668VfSJ6O4OHtO0spXirFx5YDs03d2o1KxxufATIbPgKcFQ==}
-
   '@jridgewell/gen-mapping@0.3.13':
     resolution: {integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==}
 
@@ -330,6 +327,9 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
+
+  '@liyang8246/kle-serial@0.1.1':
+    resolution: {integrity: sha512-pgixk2+QYxWLEV0HT7gluaB6H9taF0BhQxZPCMXzq0gKLpRMbE5b5eAcun/C6dNayfNzT7HPS3K7Cx1srNG2Sg==}
 
   '@napi-rs/wasm-runtime@1.1.6':
     resolution: {integrity: sha512-ZLv/JdUfkvOy9eCnnBaGfiO+XimbjebAeO+MRQqD/B+FR1tnRN0tpKSJHRbE8sFfS6aqsXZ67TQjfwfsxULVbg==}
@@ -1897,6 +1897,9 @@ packages:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
 
+  zod@4.4.3:
+    resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
+
   zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
 
@@ -2203,10 +2206,6 @@ snapshots:
 
   '@humanwhocodes/retry@0.4.3': {}
 
-  '@ijprest/kle-serial@0.15.1':
-    dependencies:
-      json5: 2.2.3
-
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:
       '@jridgewell/sourcemap-codec': 1.5.5
@@ -2225,6 +2224,11 @@ snapshots:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
+
+  '@liyang8246/kle-serial@0.1.1':
+    dependencies:
+      json5: 2.2.3
+      zod: 4.4.3
 
   '@napi-rs/wasm-runtime@1.1.6(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)':
     dependencies:
@@ -3891,5 +3895,7 @@ snapshots:
   yaml@2.9.0: {}
 
   yocto-queue@0.1.0: {}
+
+  zod@4.4.3: {}
 
   zwitch@2.0.4: {}

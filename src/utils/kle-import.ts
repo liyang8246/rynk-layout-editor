@@ -1,4 +1,4 @@
-import { Serial } from '@ijprest/kle-serial'
+import { parse as kleParse } from '@liyang8246/kle-serial'
 import { nanoid } from 'nanoid'
 import type { KeyData, EncoderData, LShape } from '../stores/layout'
 
@@ -38,7 +38,7 @@ function hasRect2(x2: number, y2: number, width2: number, height2: number, width
  * - Matrix dimensions computed from spatial layout only
  */
 export function parseKleJson(json: string): KleImportResult {
-  const keyboard = Serial.parse(json)
+  const keyboard = kleParse(json)
 
   const keys: KeyData[] = []
 

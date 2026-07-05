@@ -2,3 +2,4 @@ allowBuilds:
   agent-browser: true
 minimumReleaseAgeExclude:
   - daisyui@5.6.13
+  - '@liyang8246/kle-serial@0.1.1'
