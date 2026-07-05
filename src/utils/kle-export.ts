@@ -54,7 +54,12 @@ export function exportKleJson(state: LayoutState): string {
       props.h2 = round(key.lshape.h2)
     }
 
-    const legend = key.row >= 0 && key.col >= 0 ? `${key.row},${key.col}` : ''
+    let legend = key.row >= 0 && key.col >= 0 ? `${key.row},${key.col}` : ''
+    if (key.option) {
+      // Vial convention: append group,choice as 10th legend field
+      // 9 newlines to reach the 10th field, then groupId,choiceId
+      legend += `\n\n\n\n\n\n\n\n\n${key.option.groupId},${key.option.choiceId}`
+    }
     rows.push([props, legend])
   }
 

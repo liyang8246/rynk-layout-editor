@@ -1,3 +1,4 @@
+import { createSignal } from 'solid-js'
 import {
   addEncoder,
   addKey,
@@ -10,6 +11,7 @@ import {
   state,
 } from '../stores/layout'
 import { exportKleJson } from '../utils/kle-export'
+import { convertKle } from '../utils/rynk-wasm'
 
 function downloadFile(content: string, filename: string, mimeType: string) {
   const blob = new Blob([content], { type: mimeType })
@@ -23,6 +25,7 @@ function downloadFile(content: string, filename: string, mimeType: string) {
 
 export function Toolbar() {
   let fileInput!: HTMLInputElement
+  const [exportingRynk, setExportingRynk] = createSignal(false)
 
   const handleImportClick = () => {
     if (!window.confirm('Importing will replace the current layout. Continue?')) return
@@ -48,6 +51,38 @@ export function Toolbar() {
     input.value = ''
   }
 
+  const handleExportRynk = async () => {
+    setExportingRynk(true)
+    try {
+      // Ensure matrix is assigned before export
+      const hasUnassigned = state.keys.some(k => k.row < 0 || k.col < 0)
+      if (hasUnassigned) {
+        if (!window.confirm('Some keys have no matrix assignment. Auto-assign before export?')) return
+        autoNumberMatrix()
+      }
+
+      // Build Vial-format JSON for WASM (so matrix dims are passed correctly)
+      const kleJson = exportKleJson(state)
+      const vialJson = JSON.stringify({
+        matrix: { rows: state.matrixRows, cols: state.matrixCols },
+        layouts: { keymap: JSON.parse(kleJson) },
+      })
+
+      const result = await convertKle(vialJson)
+      downloadFile(result.display_toml, 'layout.toml', 'text/x-toml')
+
+      if (result.warnings.length > 0) {
+        alert(`Exported with warnings:\n\n${result.warnings.join('\n')}`)
+      }
+    }
+    catch (err) {
+      alert(`Failed to export Rynk TOML: ${err}`)
+    }
+    finally {
+      setExportingRynk(false)
+    }
+  }
+
   return (
     <div class="flex items-center gap-2 p-2 bg-base-200 border-b border-base-300">
       <input
@@ -69,6 +104,14 @@ export function Toolbar() {
         }}
       >
         Export KLE
+      </button>
+
+      <button
+        class="btn btn-sm btn-success"
+        disabled={exportingRynk() || state.keys.length === 0}
+        onClick={handleExportRynk}
+      >
+        {exportingRynk() ? 'Exporting...' : 'Export Rynk TOML'}
       </button>
 
       <div class="divider divider-horizontal mx-1" />
@@ -109,7 +152,7 @@ export function Toolbar() {
           min="1"
           class="w-12"
           value={state.matrixRows}
-          onInput={e =>
+          onChange={e =>
             setMatrixSize(
               Number.parseInt(e.currentTarget.value) || 1,
               state.matrixCols,
@@ -124,7 +167,7 @@ export function Toolbar() {
           min="1"
           class="w-12"
           value={state.matrixCols}
-          onInput={e =>
+          onChange={e =>
             setMatrixSize(
               state.matrixRows,
               Number.parseInt(e.currentTarget.value) || 1,

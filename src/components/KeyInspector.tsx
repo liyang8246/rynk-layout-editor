@@ -1,6 +1,7 @@
 import type { EncoderData, KeyData, PinData } from '../stores/layout'
-import { Show } from 'solid-js'
+import { Show, Switch, Match } from 'solid-js'
 import {
+  removeKeyOption,
   selectedEncoder,
   selectedKey,
   selectedPin,
@@ -10,33 +11,26 @@ import {
   updateKeyLshape,
   updatePin,
 } from '../stores/layout'
+import { VariantPanel } from './VariantPanel'
 
 export function KeyInspector() {
   return (
     <div class="w-70 bg-base-200 border-l border-base-300 p-3 overflow-y-auto">
-      <Show
-        when={selectedKey()}
-        keyed
-        fallback={(
-          <Show
-            when={selectedPin()}
-            keyed
-            fallback={(
-              <Show
-                when={selectedEncoder()}
-                keyed
-                fallback={<p class="text-sm text-base-content/50 text-center mt-8">No selection</p>}
-              >
-                {en => <EncoderPanel encoder={en} />}
-              </Show>
-            )}
-          >
-            {p => <PinPanel pin={p} />}
-          </Show>
-        )}
-      >
-        {k => <KeyPanel keyData={k} />}
-      </Show>
+      <Switch fallback={<p class="text-sm text-base-content/50 text-center mt-8">No selection</p>}>
+        <Match when={selectedKey()} keyed>
+          {k => <KeyPanel keyData={k} />}
+        </Match>
+        <Match when={selectedPin()} keyed>
+          {p => <PinPanel pin={p} />}
+        </Match>
+        <Match when={selectedEncoder()} keyed>
+          {e => <EncoderPanel encoder={e} />}
+        </Match>
+      </Switch>
+
+      <div class="mt-4 border-t border-base-300 pt-2">
+        <VariantPanel />
+      </div>
     </div>
   )
 }
@@ -60,7 +54,7 @@ function KeyPanel(props: { keyData: KeyData }) {
                 step="0.25"
                 class="grow"
                 value={k().x}
-                onInput={e => updateKey(k().id, { x: Number.parseFloat(e.currentTarget.value) || 0 })}
+                onChange={e => updateKey(k().id, { x: Number.parseFloat(e.currentTarget.value) || 0 })}
               />
             </label>
             <label class="input input-sm input-bordered flex items-center gap-1">
@@ -70,7 +64,7 @@ function KeyPanel(props: { keyData: KeyData }) {
                 step="0.25"
                 class="grow"
                 value={k().y}
-                onInput={e => updateKey(k().id, { y: Number.parseFloat(e.currentTarget.value) || 0 })}
+                onChange={e => updateKey(k().id, { y: Number.parseFloat(e.currentTarget.value) || 0 })}
               />
             </label>
           </div>
@@ -88,7 +82,7 @@ function KeyPanel(props: { keyData: KeyData }) {
                 min="0.25"
                 class="grow"
                 value={k().w}
-                onInput={e => updateKey(k().id, { w: Number.parseFloat(e.currentTarget.value) || 1 })}
+                onChange={e => updateKey(k().id, { w: Number.parseFloat(e.currentTarget.value) || 1 })}
               />
             </label>
             <label class="input input-sm input-bordered flex items-center gap-1">
@@ -99,7 +93,7 @@ function KeyPanel(props: { keyData: KeyData }) {
                 min="0.25"
                 class="grow"
                 value={k().h}
-                onInput={e => updateKey(k().id, { h: Number.parseFloat(e.currentTarget.value) || 1 })}
+                onChange={e => updateKey(k().id, { h: Number.parseFloat(e.currentTarget.value) || 1 })}
               />
             </label>
           </div>
@@ -115,7 +109,7 @@ function KeyPanel(props: { keyData: KeyData }) {
               step="1"
               class="grow"
               value={k().r}
-              onInput={e => updateKey(k().id, { r: Number.parseFloat(e.currentTarget.value) || 0 })}
+              onChange={e => updateKey(k().id, { r: Number.parseFloat(e.currentTarget.value) || 0 })}
             />
             <span class="text-xs text-base-content/40">deg</span>
           </label>
@@ -132,7 +126,7 @@ function KeyPanel(props: { keyData: KeyData }) {
                 step="0.25"
                 class="grow"
                 value={k().rx}
-                onInput={e => updateKey(k().id, { rx: Number.parseFloat(e.currentTarget.value) || 0 })}
+                onChange={e => updateKey(k().id, { rx: Number.parseFloat(e.currentTarget.value) || 0 })}
               />
             </label>
             <label class="input input-sm input-bordered flex items-center gap-1">
@@ -142,7 +136,7 @@ function KeyPanel(props: { keyData: KeyData }) {
                 step="0.25"
                 class="grow"
                 value={k().ry}
-                onInput={e => updateKey(k().id, { ry: Number.parseFloat(e.currentTarget.value) || 0 })}
+                onChange={e => updateKey(k().id, { ry: Number.parseFloat(e.currentTarget.value) || 0 })}
               />
             </label>
           </div>
@@ -170,7 +164,7 @@ function KeyPanel(props: { keyData: KeyData }) {
                   step="0.25"
                   class="grow"
                   value={k().lshape!.x2}
-                  onInput={e => updateKeyLshape(k().id, 'x2', Number.parseFloat(e.currentTarget.value) || 0)}
+                  onChange={e => updateKeyLshape(k().id, 'x2', Number.parseFloat(e.currentTarget.value) || 0)}
                 />
               </label>
               <label class="input input-xs input-bordered flex items-center gap-1">
@@ -180,7 +174,7 @@ function KeyPanel(props: { keyData: KeyData }) {
                   step="0.25"
                   class="grow"
                   value={k().lshape!.y2}
-                  onInput={e => updateKeyLshape(k().id, 'y2', Number.parseFloat(e.currentTarget.value) || 0)}
+                  onChange={e => updateKeyLshape(k().id, 'y2', Number.parseFloat(e.currentTarget.value) || 0)}
                 />
               </label>
             </div>
@@ -193,7 +187,7 @@ function KeyPanel(props: { keyData: KeyData }) {
                   min="0.25"
                   class="grow"
                   value={k().lshape!.w2}
-                  onInput={e => updateKeyLshape(k().id, 'w2', Number.parseFloat(e.currentTarget.value) || 1)}
+                  onChange={e => updateKeyLshape(k().id, 'w2', Number.parseFloat(e.currentTarget.value) || 1)}
                 />
               </label>
               <label class="input input-xs input-bordered flex items-center gap-1">
@@ -204,7 +198,7 @@ function KeyPanel(props: { keyData: KeyData }) {
                   min="0.25"
                   class="grow"
                   value={k().lshape!.h2}
-                  onInput={e => updateKeyLshape(k().id, 'h2', Number.parseFloat(e.currentTarget.value) || 1)}
+                  onChange={e => updateKeyLshape(k().id, 'h2', Number.parseFloat(e.currentTarget.value) || 1)}
                 />
               </label>
             </div>
@@ -222,7 +216,7 @@ function KeyPanel(props: { keyData: KeyData }) {
                 min="-1"
                 class="grow"
                 value={k().row}
-                onInput={e => updateKey(k().id, { row: Number.parseInt(e.currentTarget.value) || -1 })}
+                onChange={e => updateKey(k().id, { row: Number.parseInt(e.currentTarget.value) || -1 })}
               />
             </label>
             <label class="input input-sm input-bordered flex items-center gap-1">
@@ -232,11 +226,28 @@ function KeyPanel(props: { keyData: KeyData }) {
                 min="-1"
                 class="grow"
                 value={k().col}
-                onInput={e => updateKey(k().id, { col: Number.parseInt(e.currentTarget.value) || -1 })}
+                onChange={e => updateKey(k().id, { col: Number.parseInt(e.currentTarget.value) || -1 })}
               />
             </label>
           </div>
         </div>
+
+        {/* Variant */}
+        <Show when={k().option}>
+          {(opt) => (
+            <div class="flex flex-col gap-1">
+              <span class="text-xs font-semibold text-base-content/70">Variant</span>
+              <div class="flex items-center gap-2">
+                <span class="text-xs text-base-content/60">
+                  Group {opt().groupId}, Choice {opt().choiceId}
+                </span>
+                <button class="btn btn-xs btn-ghost text-error" onClick={() => removeKeyOption(k().id)}>
+                  Remove
+                </button>
+              </div>
+            </div>
+          )}
+        </Show>
 
       </div>
     </fieldset>
@@ -280,7 +291,7 @@ function PinPanel(props: { pin: PinData }) {
             min="0"
             class="grow"
             value={p().index}
-            onInput={e => updatePin(p().id, { index: Number.parseInt(e.currentTarget.value) || 0 })}
+            onChange={e => updatePin(p().id, { index: Number.parseInt(e.currentTarget.value) || 0 })}
           />
         </label>
 
@@ -295,7 +306,7 @@ function PinPanel(props: { pin: PinData }) {
                 step="0.25"
                 class="grow"
                 value={p().x}
-                onInput={e => updatePin(p().id, { x: Number.parseFloat(e.currentTarget.value) || 0 })}
+                onChange={e => updatePin(p().id, { x: Number.parseFloat(e.currentTarget.value) || 0 })}
               />
             </label>
             <label class="input input-sm input-bordered flex items-center gap-1">
@@ -305,7 +316,7 @@ function PinPanel(props: { pin: PinData }) {
                 step="0.25"
                 class="grow"
                 value={p().y}
-                onInput={e => updatePin(p().id, { y: Number.parseFloat(e.currentTarget.value) || 0 })}
+                onChange={e => updatePin(p().id, { y: Number.parseFloat(e.currentTarget.value) || 0 })}
               />
             </label>
           </div>
@@ -330,7 +341,7 @@ function EncoderPanel(props: { encoder: EncoderData }) {
             min="0"
             class="grow"
             value={enc().encoderIndex}
-            onInput={e => updateEncoder(enc().id, { encoderIndex: Number.parseInt(e.currentTarget.value) || 0 })}
+            onChange={e => updateEncoder(enc().id, { encoderIndex: Number.parseInt(e.currentTarget.value) || 0 })}
           />
         </label>
 
@@ -342,7 +353,7 @@ function EncoderPanel(props: { encoder: EncoderData }) {
               step="0.25"
               class="grow"
               value={enc().x}
-              onInput={e => updateEncoder(enc().id, { x: Number.parseFloat(e.currentTarget.value) || 0 })}
+              onChange={e => updateEncoder(enc().id, { x: Number.parseFloat(e.currentTarget.value) || 0 })}
             />
           </label>
           <label class="input input-sm input-bordered flex items-center gap-1">
@@ -352,7 +363,7 @@ function EncoderPanel(props: { encoder: EncoderData }) {
               step="0.25"
               class="grow"
               value={enc().y}
-              onInput={e => updateEncoder(enc().id, { y: Number.parseFloat(e.currentTarget.value) || 0 })}
+              onChange={e => updateEncoder(enc().id, { y: Number.parseFloat(e.currentTarget.value) || 0 })}
             />
           </label>
         </div>

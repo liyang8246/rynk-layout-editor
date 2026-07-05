@@ -3,6 +3,7 @@ import {
   deselectAll,
   endItemDrag,
   isDragging,
+  isKeyVisible,
   KEY_UNIT,
   PIN_H,
   PIN_W,
@@ -166,6 +167,9 @@ export function Canvas() {
     const keysByRow = new Map<number, { id: string, x: number, y: number }[]>()
     const keysByCol = new Map<number, { id: string, x: number, y: number }[]>()
     for (const key of state.keys) {
+      // Skip keys hidden by variant choice
+      if (!isKeyVisible(key)) continue
+
       // Compute visual center (accounting for rotation)
       const cx = key.x + key.w / 2
       const cy = key.y + key.h / 2
@@ -347,7 +351,7 @@ export function Canvas() {
         />
 
         {/* Keys */}
-        <For each={state.keys}>
+        <For each={state.keys.filter(isKeyVisible)}>
           {key => (
             <KeyCap
               key={key}
