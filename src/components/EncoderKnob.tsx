@@ -29,8 +29,8 @@ export function EncoderKnob(props: EncoderKnobProps) {
         'cursor-pointer': !props.selected,
       }}
       style={{
-        left: `${(props.encoder.x - 0.5) * KEY_UNIT}px`,
-        top: `${(props.encoder.y - 0.5) * KEY_UNIT}px`,
+        left: `${props.encoder.x * KEY_UNIT}px`,
+        top: `${props.encoder.y * KEY_UNIT}px`,
         width: `${KEY_UNIT}px`,
         height: `${KEY_UNIT}px`,
       }}

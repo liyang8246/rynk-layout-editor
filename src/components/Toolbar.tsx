@@ -1,21 +1,15 @@
-import { For, Show } from 'solid-js'
 import {
   addEncoder,
   addKey,
   addPin,
-  addVariant,
   autoNumberMatrix,
   deleteSelected,
-  deleteVariant,
   hasSelection,
   importKleJson,
-  setActiveVariant,
   setMatrixSize,
   state,
 } from '../stores/layout'
 import { exportKleJson } from '../utils/kle-export'
-import { exportRynkToml } from '../utils/toml-export'
-import type { LayoutState } from '../stores/layout'
 
 function downloadFile(content: string, filename: string, mimeType: string) {
   const blob = new Blob([content], { type: mimeType })
@@ -54,19 +48,6 @@ export function Toolbar() {
     input.value = ''
   }
 
-  const handleAddVariant = () => {
-    const name = window.prompt('Enter variant name:')
-    if (name && name.trim()) {
-      addVariant(name.trim())
-    }
-  }
-
-  const handleDeleteVariant = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this variant?')) {
-      deleteVariant(id)
-    }
-  }
-
   return (
     <div class="flex items-center gap-2 p-2 bg-base-200 border-b border-base-300">
       <input
@@ -81,19 +62,9 @@ export function Toolbar() {
       </button>
 
       <button
-        class="btn btn-sm btn-success btn-outline"
-        onClick={() => {
-          const toml = exportRynkToml(state as LayoutState)
-          downloadFile(toml, 'keyboard_layout.toml', 'text/toml')
-        }}
-      >
-        Export TOML
-      </button>
-
-      <button
         class="btn btn-sm btn-info btn-outline"
         onClick={() => {
-          const json = exportKleJson(state as LayoutState)
+          const json = exportKleJson(state)
           downloadFile(json, 'keyboard_layout.json', 'application/json')
         }}
       >
@@ -161,46 +132,6 @@ export function Toolbar() {
         />
       </label>
 
-      {/* Variant tabs */}
-      <div class="tabs tabs-box tabs-xs">
-        <button
-          class="tab"
-          classList={{ 'tab-active': state.activeVariantIndex === -1 }}
-          onClick={() => setActiveVariant(-1)}
-        >
-          Base
-        </button>
-        <For each={state.variants}>
-          {(variant, index) => {
-            const isActive = () => state.activeVariantIndex === index()
-            return (
-              <button
-                class="tab"
-                classList={{ 'tab-active': isActive() }}
-                onClick={() => setActiveVariant(index())}
-              >
-                <span class="flex items-center gap-1">
-                  {variant.name}
-                  <Show when={isActive()}>
-                    <span
-                      class="btn btn-xs btn-ghost btn-error"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleDeleteVariant(variant.id)
-                      }}
-                    >
-                      ×
-                    </span>
-                  </Show>
-                </span>
-              </button>
-            )
-          }}
-        </For>
-        <button class="tab" onClick={handleAddVariant}>
-          +
-        </button>
-      </div>
 
       <div class="flex-1" />
 

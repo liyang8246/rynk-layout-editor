@@ -1,10 +1,10 @@
 {
   "version": "1.0.0",
-  "updatedAt": "2026-07-04T00:00:00.000Z",
+  "updatedAt": "2026-07-05T00:00:00.000Z",
   "dependencies": [
     {
       "name": "rmk/rynk-kle",
-      "resolvedVersion": "5ea8acd",
+      "resolvedVersion": "8d783ea",
       "repoUrl": "https://github.com/HaoboGu/rmk.git",
       "ref": "feat/rynk_layout",
       "path": ".slim/clonedeps/repos/HaoboGu__rmk",

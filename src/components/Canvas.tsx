@@ -2,16 +2,15 @@ import { createEffect, createMemo, createSignal, For, Show } from 'solid-js'
 import {
   deselectAll,
   endItemDrag,
-  getEffectiveKey,
   isDragging,
-  isKeyHiddenInVariant,
   KEY_UNIT,
+  PIN_H,
+  PIN_W,
   pxToUnit,
   selectItemsInRect,
   startItemDrag,
   state,
   updateItemDrag,
-  variantDisplayMap,
 } from '../stores/layout'
 import { EncoderKnob } from './EncoderKnob'
 import { KeyCap } from './KeyCap'
@@ -151,27 +150,43 @@ export function Canvas() {
 
     const selected = new Set(state.selectedIds)
 
-    // Build pin lookup maps (id + position for highlight check)
+    // Build pin lookup maps — positions stored in px (center of pin)
     const rowPins = new Map<number, { id: string, x: number, y: number }>()
     const colPins = new Map<number, { id: string, x: number, y: number }>()
     for (const pin of state.pins) {
+      const pos = { id: pin.id, x: (pin.x + PIN_W / 2) * KEY_UNIT, y: (pin.y + PIN_H / 2) * KEY_UNIT }
       if (pin.direction === 'row')
-        rowPins.set(pin.index, { id: pin.id, x: pin.x, y: pin.y })
+        rowPins.set(pin.index, pos)
       else
-        colPins.set(pin.index, { id: pin.id, x: pin.x, y: pin.y })
+        colPins.set(pin.index, pos)
     }
 
     // Group keys by row/col pin index, track key ids for highlight
+    // Positions stored in px (center of key, rotated if applicable)
     const keysByRow = new Map<number, { id: string, x: number, y: number }[]>()
     const keysByCol = new Map<number, { id: string, x: number, y: number }[]>()
     for (const key of state.keys) {
+      // Compute visual center (accounting for rotation)
+      const cx = key.x + key.w / 2
+      const cy = key.y + key.h / 2
+      let px: number, py: number
+      if (key.r !== 0) {
+        const rad = key.r * Math.PI / 180
+        const dx = cx - key.rx
+        const dy = cy - key.ry
+        px = (key.rx + dx * Math.cos(rad) - dy * Math.sin(rad)) * KEY_UNIT
+        py = (key.ry + dx * Math.sin(rad) + dy * Math.cos(rad)) * KEY_UNIT
+      } else {
+        px = cx * KEY_UNIT
+        py = cy * KEY_UNIT
+      }
       if (key.row >= 0) {
         let group = keysByRow.get(key.row)
         if (!group) {
           group = []
           keysByRow.set(key.row, group)
         }
-        group.push({ id: key.id, x: key.x * KEY_UNIT, y: key.y * KEY_UNIT })
+        group.push({ id: key.id, x: px, y: py })
       }
       if (key.col >= 0) {
         let group = keysByCol.get(key.col)
@@ -179,7 +194,7 @@ export function Canvas() {
           group = []
           keysByCol.set(key.col, group)
         }
-        group.push({ id: key.id, x: key.x * KEY_UNIT, y: key.y * KEY_UNIT })
+        group.push({ id: key.id, x: px, y: py })
       }
     }
 
@@ -189,15 +204,15 @@ export function Canvas() {
       return keys.some(k => selected.has(k.id))
     }
 
-    // Build chain lines for a pin group
+    // Build chain lines for a pin group — all positions already in px
     const buildChain = (
       pin: { id: string, x: number, y: number },
       keys: { id: string, x: number, y: number }[],
       type: 'row' | 'col',
     ) => {
       const highlighted = isChainHighlighted(pin.id, keys)
-      const px = pin.x * KEY_UNIT
-      const py = pin.y * KEY_UNIT
+      const px = pin.x
+      const py = pin.y
 
       // Sort keys by distance from pin
       const sorted = [...keys].sort((a, b) => {
@@ -338,9 +353,6 @@ export function Canvas() {
               key={key}
               selected={state.selectedIds.includes(key.id)}
               onDragStart={handleDragStart}
-              ghost={isKeyHiddenInVariant(key.row, key.col)}
-              effectiveKey={getEffectiveKey(key)}
-              displayPos={variantDisplayMap()?.get(key.id) ?? null}
             />
           )}
         </For>

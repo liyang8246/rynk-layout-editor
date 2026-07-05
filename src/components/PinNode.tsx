@@ -41,8 +41,8 @@ export function PinNode(props: PinNodeProps) {
         'cursor-pointer': !props.selected,
       }}
       style={{
-        left: `${(props.pin.x - PIN_W / 2) * KEY_UNIT}px`,
-        top: `${(props.pin.y - PIN_H / 2) * KEY_UNIT}px`,
+        left: `${props.pin.x * KEY_UNIT}px`,
+        top: `${props.pin.y * KEY_UNIT}px`,
         width: `${PIN_W * KEY_UNIT}px`,
         height: `${PIN_H * KEY_UNIT}px`,
       }}

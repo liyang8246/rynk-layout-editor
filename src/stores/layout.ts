@@ -1,14 +1,14 @@
 import { nanoid } from 'nanoid'
-import { createMemo, createSignal, onCleanup } from 'solid-js'
+import { createSignal, onCleanup } from 'solid-js'
 import { createStore, produce } from 'solid-js/store'
 import { parseKleJson } from '../utils/kle-import'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-/** L-shape secondary rectangle (Rynk convention: x2/y2 are center-offsets from primary center to secondary center) */
+/** L-shape secondary rectangle (KLE convention: x2/y2 are top-left offsets from primary top-left to secondary top-left) */
 export interface LShape {
-  x2: number // offset from primary center to secondary center (X)
-  y2: number // offset from primary center to secondary center (Y)
+  x2: number // offset from primary top-left to secondary top-left (X)
+  y2: number // offset from primary top-left to secondary top-left (Y)
   w2: number // secondary rect width
   h2: number // secondary rect height
 }
@@ -16,11 +16,13 @@ export interface LShape {
 /** A single key cap on the layout canvas */
 export interface KeyData {
   id: string
-  x: number // center X in key units (Rynk convention)
-  y: number // center Y in key units (Rynk convention)
+  x: number // top-left X in key units (KLE convention)
+  y: number // top-left Y in key units (KLE convention)
   w: number // width in key units (default 1)
   h: number // height in key units (default 1)
-  r: number // rotation degrees about center
+  r: number // rotation angle in degrees
+  rx: number // rotation origin X in key units (KLE convention)
+  ry: number // rotation origin Y in key units (KLE convention)
   lshape?: LShape // omit for non-L keys
   row: number // matrix row (-1 = unassigned)
   col: number // matrix col (-1 = unassigned)
@@ -30,8 +32,8 @@ export interface KeyData {
 export interface EncoderData {
   id: string
   encoderIndex: number // user-visible encoder index (0, 1, 2...)
-  x: number // center X in key units
-  y: number // center Y in key units
+  x: number // top-left X in key units
+  y: number // top-left Y in key units
 }
 
 /** Pin direction: row or column */
@@ -42,8 +44,8 @@ export interface PinData {
   id: string
   direction: PinDirection
   index: number // matrix row/col index (0, 1, 2...)
-  x: number // center X in key units
-  y: number // center Y in key units
+  x: number // top-left X in key units
+  y: number // top-left Y in key units
 }
 
 /** Discriminated union of all canvas item types */
@@ -51,15 +53,6 @@ export type CanvasItem
   = { type: 'key', data: KeyData }
     | { type: 'encoder', data: EncoderData }
     | { type: 'pin', data: PinData }
-
-/** A layout variant overlay (e.g., ANSI vs ISO) */
-export interface VariantData {
-  id: string
-  name: string
-  hiddenKeys: [number, number][]  // matrix positions [row, col] of hidden keys
-  shapeOverrides: Record<string, { w?: number, h?: number, r?: number, lshape?: LShape }>
-  // key format for shapeOverrides: "row,col" string
-}
 
 /** Complete layout state */
 export interface LayoutState {
@@ -69,8 +62,6 @@ export interface LayoutState {
   matrixRows: number
   matrixCols: number
   selectedIds: string[]
-  variants: VariantData[]
-  activeVariantIndex: number // -1 = base layout (no variant active)
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -95,8 +86,6 @@ const [state, setState] = createStore<LayoutState>({
   matrixRows: 5,
   matrixCols: 15,
   selectedIds: [],
-  variants: [],
-  activeVariantIndex: -1,
 })
 
 export { setState, state }
@@ -106,8 +95,8 @@ export { setState, state }
 /** Tracks an active item-drag (moving selected keys/encoders with the mouse) */
 interface ItemDragState {
   /** Snapshot of selected items' positions at drag start (in key units) */
-  origins: Map<string, { x: number, y: number }>
-  /** Last applied dx/dy in key units (unsapped, for live preview) */
+  origins: Map<string, { x: number, y: number, rx?: number, ry?: number }>
+  /** Last applied dx/dy in key units (unsnapped, for live preview) */
   lastDx: number
   lastDy: number
 }
@@ -119,11 +108,17 @@ export { isDragging }
 
 /** Start dragging all currently selected items. Call on pointerdown on a selected item. */
 export function startItemDrag(): void {
-  const origins = new Map<string, { x: number, y: number }>()
+  const origins = new Map<string, { x: number, y: number, rx?: number, ry?: number }>()
   for (const id of state.selectedIds) {
     const item = getItem(id)
-    if (item)
-      origins.set(id, { x: item.data.x, y: item.data.y })
+    if (item) {
+      const entry: { x: number, y: number, rx?: number, ry?: number } = { x: item.data.x, y: item.data.y }
+      if (item.type === 'key') {
+        entry.rx = (item.data as KeyData).rx
+        entry.ry = (item.data as KeyData).ry
+      }
+      origins.set(id, entry)
+    }
   }
 
   itemDragState = { origins, lastDx: 0, lastDy: 0 }
@@ -136,10 +131,22 @@ export function updateItemDrag(dx: number, dy: number): void {
   if (!d) return
 
   for (const id of state.selectedIds) {
-    const bounds = getItemBounds(id)
     const o = d.origins.get(id)
-    if (!bounds || !o) continue
-    updateItemPosition(id, Math.max(bounds.w / 2, o.x + dx), Math.max(bounds.h / 2, o.y + dy))
+    if (!o) continue
+    const newX = Math.max(0, o.x + dx)
+    const newY = Math.max(0, o.y + dy)
+    // Compute actual delta (may differ from dx/dy due to clamping)
+    const actualDx = newX - o.x
+    const actualDy = newY - o.y
+    updateItemPosition(id, newX, newY)
+    // Move rx/ry by the same actual delta to keep rotation origin in sync
+    if (o.rx !== undefined && o.ry !== undefined) {
+      const keyIdx = state.keys.findIndex(k => k.id === id)
+      if (keyIdx !== -1) {
+        setState('keys', keyIdx, 'rx', o.rx + actualDx)
+        setState('keys', keyIdx, 'ry', o.ry + actualDy)
+      }
+    }
   }
 
   d.lastDx = dx
@@ -152,8 +159,16 @@ export function endItemDrag(): void {
 
   for (const id of state.selectedIds) {
     const item = getItem(id)
-    if (item)
+    if (item) {
       updateItemPosition(id, snap(item.data.x), snap(item.data.y))
+      if (item.type === 'key') {
+        const keyIdx = state.keys.findIndex(k => k.id === id)
+        if (keyIdx !== -1) {
+          setState('keys', keyIdx, 'rx', snap(state.keys[keyIdx].rx))
+          setState('keys', keyIdx, 'ry', snap(state.keys[keyIdx].ry))
+        }
+      }
+    }
   }
 
   itemDragState = null
@@ -193,24 +208,26 @@ export function hasSelectedKeys(): boolean {
 
 // ── Actions ────────────────────────────────────────────────────────────────────
 
-/** Add a new key at the given grid position */
-export function addKey(cx: number, cy: number): string {
+/** Add a new key at the given grid position (top-left) */
+export function addKey(x: number, y: number): string {
   const id = nanoid()
   setState('keys', prev => [...prev, {
     id,
-    x: cx,
-    y: cy,
+    x,
+    y,
     w: 1,
     h: 1,
     r: 0,
+    rx: 0,
+    ry: 0,
     row: -1,
     col: -1,
   }])
   return id
 }
 
-/** Add a new encoder at the given position */
-export function addEncoder(cx: number, cy: number): string {
+/** Add a new encoder at the given position (top-left) */
+export function addEncoder(x: number, y: number): string {
   const id = nanoid()
   const nextIndex = state.encoders.length === 0
     ? 0
@@ -218,8 +235,8 @@ export function addEncoder(cx: number, cy: number): string {
   setState('encoders', prev => [...prev, {
     id,
     encoderIndex: nextIndex,
-    x: cx,
-    y: cy,
+    x,
+    y,
   }])
   return id
 }
@@ -260,11 +277,8 @@ export function selectItemsInRect(x1: number, y1: number, x2: number, y2: number
 
   for (const item of getAllItems()) {
     const b = canvasItemBounds(item)
-    const ix1 = b.x - b.w / 2
-    const iy1 = b.y - b.h / 2
-    const ix2 = b.x + b.w / 2
-    const iy2 = b.y + b.h / 2
-    if (ix2 > left && ix1 < right && iy2 > top && iy1 < bottom)
+    // b.x/y are top-left, so the rect spans [b.x, b.x+b.w] x [b.y, b.y+b.h]
+    if (b.x + b.w > left && b.x < right && b.y + b.h > top && b.y < bottom)
       ids.push(item.data.id)
   }
 
@@ -276,9 +290,20 @@ export function selectItemsInRect(x1: number, y1: number, x2: number, y2: number
 export function moveSelected(dx: number, dy: number): void {
   for (const id of state.selectedIds) {
     const item = getItem(id)
-    const bounds = getItemBounds(id)
-    if (!item || !bounds) continue
-    updateItemPosition(id, Math.max(bounds.w / 2, snap(item.data.x + dx)), Math.max(bounds.h / 2, snap(item.data.y + dy)))
+    if (!item) continue
+    const newX = Math.max(0, snap(item.data.x + dx))
+    const newY = Math.max(0, snap(item.data.y + dy))
+    // Compute actual delta (may differ from dx/dy due to clamping)
+    const actualDx = newX - item.data.x
+    const actualDy = newY - item.data.y
+    updateItemPosition(id, newX, newY)
+    if (item.type === 'key') {
+      const keyIdx = state.keys.findIndex(k => k.id === id)
+      if (keyIdx !== -1) {
+        setState('keys', keyIdx, 'rx', snap(state.keys[keyIdx].rx + actualDx))
+        setState('keys', keyIdx, 'ry', snap(state.keys[keyIdx].ry + actualDy))
+      }
+    }
   }
 }
 
@@ -303,15 +328,15 @@ export function updateEncoder(id: string, updates: Partial<Omit<EncoderData, 'id
   setState('encoders', idx, updates as any)
 }
 
-/** Add a new pin at the given position */
-export function addPin(cx: number, cy: number, direction: PinDirection): string {
+/** Add a new pin at the given position (top-left) */
+export function addPin(x: number, y: number, direction: PinDirection): string {
   const id = nanoid()
   // Auto-assign next available index for this direction
   const existingIndices = state.pins
     .filter(p => p.direction === direction)
     .map(p => p.index)
   const nextIndex = existingIndices.length === 0 ? 0 : Math.max(...existingIndices) + 1
-  setState('pins', prev => [...prev, { id, direction, index: nextIndex, x: cx, y: cy }])
+  setState('pins', prev => [...prev, { id, direction, index: nextIndex, x, y }])
   return id
 }
 
@@ -403,8 +428,6 @@ export function importKleJson(json: string): void {
     matrixRows: result.matrixRows,
     matrixCols: result.matrixCols,
     selectedIds: [],
-    variants: result.variants,
-    activeVariantIndex: -1,
   })
 }
 
@@ -415,178 +438,6 @@ export function toggleLShape(id: string): void {
   if (key.lshape) updateKey(id, { lshape: undefined })
   else updateKey(id, { lshape: { x2: 0, y2: 0, w2: key.w, h2: key.h } })
 }
-
-// ── Variant actions ─────────────────────────────────────────────────────────────
-
-/** Get the currently active variant, or null if viewing base layout */
-export function activeVariant(): VariantData | null {
-  if (state.activeVariantIndex < 0 || state.activeVariantIndex >= state.variants.length) return null
-  return state.variants[state.activeVariantIndex]
-}
-
-/** Add a new variant */
-export function addVariant(name: string): void {
-  const id = nanoid()
-  setState('variants', prev => [...prev, { id, name, hiddenKeys: [], shapeOverrides: {} }])
-}
-
-/** Delete a variant by id */
-export function deleteVariant(id: string): void {
-  const idx = state.variants.findIndex(v => v.id === id)
-  if (idx === -1) return
-  setState('variants', prev => prev.filter(v => v.id !== id))
-  // Adjust active index if needed
-  if (state.activeVariantIndex >= state.variants.length) {
-    setState('activeVariantIndex', Math.max(-1, state.variants.length - 1))
-  }
-}
-
-/** Rename a variant */
-export function renameVariant(id: string, name: string): void {
-  const idx = state.variants.findIndex(v => v.id === id)
-  if (idx === -1) return
-  setState('variants', idx, 'name', name)
-}
-
-/** Set the active variant index (-1 for base) */
-export function setActiveVariant(index: number): void {
-  setState('activeVariantIndex', index)
-}
-
-/** Toggle whether a key (by matrix position) is hidden in the active variant */
-export function toggleKeyHidden(row: number, col: number): void {
-  const variant = activeVariant()
-  if (!variant) return
-  const idx = state.variants.findIndex(v => v.id === variant.id)
-  if (idx === -1) return
-
-  const existingIdx = variant.hiddenKeys.findIndex(([r, c]) => r === row && c === col)
-
-  if (existingIdx !== -1) {
-    // Un-hide
-    setState('variants', idx, 'hiddenKeys', prev => prev.filter(([r, c]) => r !== row || c !== col) as [number, number][])
-  } else {
-    // Hide
-    setState('variants', idx, 'hiddenKeys', prev => [...prev, [row, col] as [number, number]])
-  }
-}
-
-/** Set a shape override for a key (by matrix position) in the active variant */
-export function setShapeOverride(row: number, col: number, overrides: { w?: number, h?: number, r?: number, lshape?: LShape }): void {
-  const variant = activeVariant()
-  if (!variant) return
-  const idx = state.variants.findIndex(v => v.id === variant.id)
-  if (idx === -1) return
-
-  const key = `${row},${col}`
-  setState('variants', idx, 'shapeOverrides', key, overrides)
-}
-
-/** Clear a shape override for a key in the active variant */
-export function clearShapeOverride(row: number, col: number): void {
-  const variant = activeVariant()
-  if (!variant) return
-  const idx = state.variants.findIndex(v => v.id === variant.id)
-  if (idx === -1) return
-
-  const key = `${row},${col}`
-  // Remove the key from shapeOverrides
-  setState('variants', idx, 'shapeOverrides', (prev) => {
-    const next = { ...prev }
-    delete next[key]
-    return next
-  })
-}
-
-/** Remove a single field from a shape override for a key in the active variant */
-export function removeShapeOverrideField(row: number, col: number, field: 'w' | 'h' | 'r' | 'lshape'): void {
-  const variant = activeVariant()
-  if (!variant) return
-  const idx = state.variants.findIndex(v => v.id === variant.id)
-  if (idx === -1) return
-
-  const key = `${row},${col}`
-  const existing = variant.shapeOverrides[key]
-  if (!existing) return
-
-  const updated = { ...existing }
-  delete (updated as any)[field]
-  // If no fields remain, remove the whole override
-  if (Object.keys(updated).length === 0) {
-    setState('variants', idx, 'shapeOverrides', (prev) => {
-      const next = { ...prev }
-      delete next[key]
-      return next
-    })
-  }
-  else {
-    setState('variants', idx, 'shapeOverrides', key, updated)
-  }
-}
-
-/** Check if a key (by matrix position) is hidden in the active variant */
-export function isKeyHiddenInVariant(row: number, col: number): boolean {
-  const variant = activeVariant()
-  if (!variant) return false
-  return variant.hiddenKeys.some(([r, c]) => r === row && c === col)
-}
-
-/** Get effective key data for a key in the active variant (applying shape overrides) */
-export function getEffectiveKey(key: KeyData): KeyData {
-  const variant = activeVariant()
-  if (!variant || key.row < 0 || key.col < 0) return key
-
-  const overrideKey = `${key.row},${key.col}`
-  const override = variant.shapeOverrides[overrideKey]
-  if (!override) return key
-
-  return {
-    ...key,
-    ...(override.w !== undefined ? { w: override.w } : {}),
-    ...(override.h !== undefined ? { h: override.h } : {}),
-    ...(override.r !== undefined ? { r: override.r } : {}),
-    ...(override.lshape !== undefined ? { lshape: override.lshape } : {}),
-  }
-}
-
-/** Compute display positions for all keys considering active variant reflow.
- *  Hidden keys cause subsequent keys in the same row to shift left. */
-export const variantDisplayMap = createMemo(() => {
-  const variant = activeVariant()
-  if (!variant) return null // null = use raw positions (no variant active)
-
-  const hiddenSet = new Set(variant.hiddenKeys.map(([r, c]) => `${r},${c}`))
-  const displayMap = new Map<string, { displayX: number, displayY: number }>()
-
-  // Group keys by approximate y (rows)
-  const sorted = [...state.keys].sort((a, b) => a.y - b.y || a.x - b.x)
-  const rows: KeyData[][] = []
-  for (const key of sorted) {
-    const existingRow = rows.find(row => Math.abs(row[0].y - key.y) < 0.5)
-    if (existingRow) existingRow.push(key)
-    else rows.push([key])
-  }
-
-  // For each row, compute reflow
-  for (const row of rows) {
-    const sortedRow = [...row].sort((a, b) => a.x - b.x)
-    let shift = 0
-    for (const key of sortedRow) {
-      const keyCoord = `${key.row},${key.col}`
-      if (hiddenSet.has(keyCoord)) {
-        // This key is hidden — add its BASE width to the shift accumulator.
-        // Hidden keys shouldn't use overridden width since they're invisible;
-        // the shift represents the space the base key occupied.
-        shift += key.w
-      } else {
-        // Visible key — apply accumulated shift
-        displayMap.set(key.id, { displayX: key.x - shift, displayY: key.y })
-      }
-    }
-  }
-
-  return displayMap
-})
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -612,7 +463,9 @@ export function getItemBounds(id: string): { x: number, y: number, w: number, h:
   return canvasItemBounds(item)
 }
 
-/** Compute bounding box from a CanvasItem */
+/** Compute bounding box from a CanvasItem (x/y are top-left).
+ *  Note: for rotated keys, this returns the unrotated axis-aligned bounding box.
+ *  Rubber-band selection may be slightly inaccurate for heavily rotated keys. */
 function canvasItemBounds(item: CanvasItem): { x: number, y: number, w: number, h: number } {
   if (item.type === 'key')
     return { x: item.data.x, y: item.data.y, w: item.data.w, h: item.data.h }
