@@ -1,28 +1,17 @@
-## Usage
+# Rynk Layout Editor
+
+Web-based keyboard layout editor for [Rynk](https://github.com/HaoboGu/rmk/tree/feat/rynk_layout/rynk) — outputs Rynk settings for the [RMK](https://github.com/HaoboGu/rmk) keyboard firmware, with wiring/matrix auto-generation.
+
+## Quick Start
 
 ```bash
-$ npm install # or pnpm install or yarn install
+pnpm install
+pnpm dev        # http://localhost:5173
+pnpm build      # production build → dist/
 ```
 
-### Learn more on the [Solid Website](https://solidjs.com) and come chat with us on our [Discord](https://discord.com/invite/solidjs)
+## Acknowledgements
 
-## Available Scripts
-
-In the project directory, you can run:
-
-### `npm run dev`
-
-Runs the app in the development mode.<br>
-Open [http://localhost:5173](http://localhost:5173) to view it in the browser.
-
-### `npm run build`
-
-Builds the app for production to the `dist` folder.<br>
-It correctly bundles Solid in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.<br>
-Your app is ready to be deployed!
-
-## Deployment
-
-Learn more about deploying your application with the [documentations](https://vite.dev/guide/static-deploy.html)
+- [RMK](https://github.com/HaoboGu/rmk) — Rust keyboard firmware with Rynk layout support
+- [keyboard-layout-editor](https://github.com/ijprest/keyboard-layout-editor) — KLE JSON schema and rendering reference
+- [SolidJS](https://solidjs.com) · [daisyUI](https://daisyui.com) · [Tailwind CSS](https://tailwindcss.com) · [Vite](https://vite.dev)
