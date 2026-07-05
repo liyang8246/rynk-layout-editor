@@ -26,7 +26,7 @@ const fixtureNames = [
 ]
 
 function loadFixture(name: string): string {
-  return readFileSync(join(FIXTURES_DIR, `${name}.input.json`), 'utf-8')
+  return readFileSync(join(FIXTURES_DIR, `${name}.json`), 'utf-8')
 }
 
 /** Build a minimal LayoutState from a parseKleJson result */
