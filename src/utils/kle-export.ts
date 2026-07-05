@@ -1,14 +1,14 @@
 /**
- * KLE JSON export — uses @liyang8246/kle-serial's serialize() to produce
- * correct KLE JSON with proper row grouping, relative coordinates, and
- * incremental property encoding.
+ * KLE JSON export — uses @liyang8246/kle-serial's serializeCompact() to
+ * produce compact KLE JSON (no metadata row) with proper row grouping,
+ * relative coordinates, and incremental property encoding.
  *
  * The internal KeyData model uses KLE conventions (top-left x/y, rx/ry
  * rotation, x2/y2 L-shape offsets), so we map directly to the library's
  * key format and let it handle serialization.
  */
 
-import { serialize } from '@liyang8246/kle-serial'
+import { serializeCompact } from '@liyang8246/kle-serial'
 import type { LayoutState } from '../stores/layout'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -141,8 +141,8 @@ export function exportKleJson(state: LayoutState): string {
     })
   }
 
-  // Use kle-serial's serialize to produce the correct KLE JSON structure
-  const serialized = serialize({ meta: {} as any, keys: kleKeys as any })
+  // Use kle-serial's serializeCompact to produce compact KLE JSON (no metadata row)
+  const serialized = serializeCompact({ meta: {} as any, keys: kleKeys as any })
   return JSON.stringify(serialized, null, 2)
 }
 

@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@liyang8246/kle-serial':
-        specifier: ^0.1.1
-        version: 0.1.1
+        specifier: ^0.2.0
+        version: 0.2.0
       nanoid:
         specifier: ^5.1.16
         version: 5.1.16
@@ -395,8 +395,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@liyang8246/kle-serial@0.1.1':
-    resolution: {integrity: sha512-pgixk2+QYxWLEV0HT7gluaB6H9taF0BhQxZPCMXzq0gKLpRMbE5b5eAcun/C6dNayfNzT7HPS3K7Cx1srNG2Sg==}
+  '@liyang8246/kle-serial@0.2.0':
+    resolution: {integrity: sha512-KI2v0sgjdtJZEBYr8BXvLJNEZ+MZXyXRpUZV3GiltIgWH+Syb0keNXwM9M+vwrRk6SAms2jo36OE+g1PLRRvaQ==}
 
   '@napi-rs/wasm-runtime@1.1.6':
     resolution: {integrity: sha512-ZLv/JdUfkvOy9eCnnBaGfiO+XimbjebAeO+MRQqD/B+FR1tnRN0tpKSJHRbE8sFfS6aqsXZ67TQjfwfsxULVbg==}
@@ -2573,7 +2573,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@liyang8246/kle-serial@0.1.1':
+  '@liyang8246/kle-serial@0.2.0':
     dependencies:
       json5: 2.2.3
       zod: 4.4.3
