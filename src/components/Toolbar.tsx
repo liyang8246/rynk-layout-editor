@@ -58,12 +58,7 @@ export function Toolbar() {
   const handleExportRynk = async () => {
     setExportingRynk(true)
     try {
-      // Ensure matrix is assigned before export
-      const hasUnassigned = state.keys.some(k => k.row < 0 || k.col < 0)
-      if (hasUnassigned) {
-        if (!window.confirm('Some keys have no matrix assignment. Auto-assign before export?')) return
-        autoNumberMatrix()
-      }
+      // Export as-is, do not auto-assign matrix
 
       // Build Vial-format JSON for WASM (so matrix dims are passed correctly)
       const kleJson = exportKleJson(state)
