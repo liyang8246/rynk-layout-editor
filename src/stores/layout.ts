@@ -209,7 +209,7 @@ export const pasteClipboard = withHistory((): void => {
   const newKeys = clipboard.keys.map((k) => {
     const id = nanoid()
     pastedIds.push(id)
-    return { ...k, id, x: k.x + 1, y: k.y + 1, option: k.option ? { ...k.option } : undefined }
+    return { ...k, id, x: k.x + 0.5, y: k.y + 0.5, option: k.option ? { ...k.option } : undefined }
   })
   const nextEncoderIndex = state.encoders.length === 0
     ? 0
@@ -217,7 +217,7 @@ export const pasteClipboard = withHistory((): void => {
   const newEncoders = clipboard.encoders.map((e, i) => {
     const id = nanoid()
     pastedIds.push(id)
-    return { ...e, id, encoderIndex: nextEncoderIndex + i, x: e.x + 1, y: e.y + 1 }
+    return { ...e, id, encoderIndex: nextEncoderIndex + i, x: e.x + 0.5, y: e.y + 0.5 }
   })
   setState('keys', prev => [...prev, ...newKeys])
   setState('encoders', prev => [...prev, ...newEncoders])
