@@ -4,11 +4,15 @@ import {
   addKey,
   addPin,
   autoNumberMatrix,
+  canRedo,
+  canUndo,
   deleteSelected,
   hasSelection,
   importKleJson,
+  redo,
   setMatrixSize,
   state,
+  undo,
 } from '../stores/layout'
 import { exportKleJson } from '../utils/kle-export'
 import { convertKle } from '../utils/rynk-wasm'
@@ -92,6 +96,15 @@ export function Toolbar() {
         class="hidden"
         onChange={handleFileChange}
       />
+      <button class="btn btn-sm btn-ghost" disabled={!canUndo()} onClick={undo} title="Undo (Ctrl+Z)">
+        &#x21B6; Undo
+      </button>
+      <button class="btn btn-sm btn-ghost" disabled={!canRedo()} onClick={redo} title="Redo (Ctrl+Y)">
+        &#x21B7; Redo
+      </button>
+
+      <div class="divider divider-horizontal mx-1" />
+
       <button class="btn btn-sm btn-primary btn-outline" onClick={handleImportClick}>
         Import KLE
       </button>

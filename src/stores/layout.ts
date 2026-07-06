@@ -139,6 +139,18 @@ export function pushHistory(): void {
   updateUndoRedoSignals()
 }
 
+/**
+ * Wrap an action function so it pushes history before executing.
+ *  If the wrapped function returns early (guard clause) without mutating state,
+ *  pushHistory's dedup check silently discards the duplicate snapshot.
+ */
+function withHistory<T extends (...args: any[]) => any>(fn: T): T {
+  return ((...args: any[]) => {
+    pushHistory()
+    return fn(...args)
+  }) as T
+}
+
 /** Restore previous state from history */
 export function undo(): void {
   if (historyIndex <= 0) return
@@ -191,9 +203,8 @@ export function copySelected(): void {
 }
 
 /** Paste clipboard items at offset, selecting the pasted item */
-export function pasteClipboard(): void {
+export const pasteClipboard = withHistory((): void => {
   if (clipboard.keys.length === 0 && clipboard.encoders.length === 0) return
-  pushHistory()
   const pastedIds: string[] = []
   const newKeys = clipboard.keys.map((k) => {
     const id = nanoid()
@@ -211,7 +222,7 @@ export function pasteClipboard(): void {
   setState('keys', prev => [...prev, ...newKeys])
   setState('encoders', prev => [...prev, ...newEncoders])
   setState('selectedIds', pastedIds)
-}
+})
 
 // ── Item drag state ────────────────────────────────────────────────────────────
 
@@ -230,8 +241,7 @@ const [isDragging, setIsDragging] = createSignal(false)
 export { isDragging }
 
 /** Start dragging all currently selected items. Call on pointerdown on a selected item. */
-export function startItemDrag(): void {
-  pushHistory()
+export const startItemDrag = withHistory((): void => {
   const origins = new Map<string, { x: number, y: number, rx?: number, ry?: number }>()
   for (const id of state.selectedIds) {
     const item = getItem(id)
@@ -247,7 +257,7 @@ export function startItemDrag(): void {
 
   itemDragState = { origins, lastDx: 0, lastDy: 0 }
   setIsDragging(true)
-}
+})
 
 /** Update positions during drag (no snap, applied relative to origins). Clamps to ≥0. */
 export function updateItemDrag(dx: number, dy: number): void {
@@ -333,8 +343,7 @@ export function hasSelectedKeys(): boolean {
 // ── Actions ────────────────────────────────────────────────────────────────────
 
 /** Add a new key at the given grid position (top-left) */
-export function addKey(x: number, y: number): string {
-  pushHistory()
+export const addKey = withHistory((x: number, y: number): string => {
   const id = nanoid()
   setState('keys', prev => [...prev, {
     id,
@@ -350,11 +359,10 @@ export function addKey(x: number, y: number): string {
     option: undefined,
   }])
   return id
-}
+})
 
 /** Add a new encoder at the given position (top-left) */
-export function addEncoder(x: number, y: number): string {
-  pushHistory()
+export const addEncoder = withHistory((x: number, y: number): string => {
   const id = nanoid()
   const nextIndex = state.encoders.length === 0
     ? 0
@@ -366,17 +374,16 @@ export function addEncoder(x: number, y: number): string {
     y,
   }])
   return id
-}
+})
 
 /** Delete all selected items */
-export function deleteSelected(): void {
-  pushHistory()
+export const deleteSelected = withHistory((): void => {
   const ids = new Set(state.selectedIds)
   setState('keys', prev => prev.filter(k => !ids.has(k.id)))
   setState('encoders', prev => prev.filter(e => !ids.has(e.id)))
   setState('pins', prev => prev.filter(p => !ids.has(p.id)))
   setState('selectedIds', [])
-}
+})
 
 /** Select an item (replacing current selection unless additive) */
 export function selectItem(id: string, additive: boolean): void {
@@ -415,8 +422,7 @@ export function selectItemsInRect(x1: number, y1: number, x2: number, y2: number
 }
 
 /** Move selected items by delta (keyboard). Clamps to keep items in view. */
-export function moveSelected(dx: number, dy: number): void {
-  pushHistory()
+export const moveSelected = withHistory((dx: number, dy: number): void => {
   for (const id of state.selectedIds) {
     const item = getItem(id)
     if (!item) continue
@@ -434,35 +440,31 @@ export function moveSelected(dx: number, dy: number): void {
       }
     }
   }
-}
+})
 
 /** Update a key's property */
-export function updateKey(id: string, updates: Partial<Omit<KeyData, 'id'>>): void {
-  pushHistory()
+export const updateKey = withHistory((id: string, updates: Partial<Omit<KeyData, 'id'>>): void => {
   const idx = state.keys.findIndex(k => k.id === id)
   if (idx === -1) return
   setState('keys', idx, updates as any)
-}
+})
 
 /** Update an L-shape sub-field on a key */
-export function updateKeyLshape(id: string, field: keyof LShape, value: number): void {
-  pushHistory()
+export const updateKeyLshape = withHistory((id: string, field: keyof LShape, value: number): void => {
   const idx = state.keys.findIndex(k => k.id === id)
   if (idx === -1) return
   setState('keys', idx, 'lshape', field, value as any)
-}
+})
 
 /** Update an encoder's property */
-export function updateEncoder(id: string, updates: Partial<Omit<EncoderData, 'id'>>): void {
-  pushHistory()
+export const updateEncoder = withHistory((id: string, updates: Partial<Omit<EncoderData, 'id'>>): void => {
   const idx = state.encoders.findIndex(e => e.id === id)
   if (idx === -1) return
   setState('encoders', idx, updates as any)
-}
+})
 
 /** Add a new pin at the given position (top-left) */
-export function addPin(x: number, y: number, direction: PinDirection): string {
-  pushHistory()
+export const addPin = withHistory((x: number, y: number, direction: PinDirection): string => {
   const id = nanoid()
   // Auto-assign next available index for this direction
   const existingIndices = state.pins
@@ -471,11 +473,10 @@ export function addPin(x: number, y: number, direction: PinDirection): string {
   const nextIndex = existingIndices.length === 0 ? 0 : Math.max(...existingIndices) + 1
   setState('pins', prev => [...prev, { id, direction, index: nextIndex, x, y }])
   return id
-}
+})
 
 /** Update a pin's property */
-export function updatePin(id: string, updates: Partial<Omit<PinData, 'id'>>): void {
-  pushHistory()
+export const updatePin = withHistory((id: string, updates: Partial<Omit<PinData, 'id'>>): void => {
   const idx = state.pins.findIndex(p => p.id === id)
   if (idx === -1) return
   // Validate: if changing direction or index, check for duplicate
@@ -488,11 +489,10 @@ export function updatePin(id: string, updates: Partial<Omit<PinData, 'id'>>): vo
       return // silently reject duplicate index per direction
   }
   setState('pins', idx, updates as any)
-}
+})
 
 /** Connect all selected keys to the given pin (assign row/col) */
-export function connectSelectedToPin(pinId: string): void {
-  pushHistory()
+export const connectSelectedToPin = withHistory((pinId: string): void => {
   const pin = state.pins.find(p => p.id === pinId)
   if (!pin) return
   const ids = new Set(state.selectedIds)
@@ -505,18 +505,16 @@ export function connectSelectedToPin(pinId: string): void {
         key.col = pin.index
     }
   }))
-}
+})
 
 /** Set matrix dimensions */
-export function setMatrixSize(rows: number, cols: number): void {
-  pushHistory()
+export const setMatrixSize = withHistory((rows: number, cols: number): void => {
   setState('matrixRows', rows)
   setState('matrixCols', cols)
-}
+})
 
 /** Auto-assign matrix positions based on spatial layout */
-export function autoNumberMatrix(): void {
-  pushHistory()
+export const autoNumberMatrix = withHistory((): void => {
   // Sort keys by y then x (reading order)
   const sorted = [...state.keys]
     .sort((a, b) => a.y - b.y || a.x - b.x)
@@ -550,15 +548,14 @@ export function autoNumberMatrix(): void {
     }
   }))
 
-  // Update matrix size (directly, not via setMatrixSize which pushes history again)
+  // Update matrix size directly (withHistory already pushed once)
   const maxCol = Math.max(...sortedRows.map(r => r.length))
   setState('matrixRows', sortedRows.length)
   setState('matrixCols', maxCol)
-}
+})
 
 /** Import a KLE JSON layout, replacing the current state */
-export function importKleJson(json: string): void {
-  pushHistory()
+export const importKleJson = withHistory((json: string): void => {
   const result = parseKleJson(json)
   setState({
     keys: result.keys,
@@ -570,11 +567,10 @@ export function importKleJson(json: string): void {
     activeChoices: result.activeChoices,
     selectedIds: [],
   })
-}
+})
 
 /** Toggle L-shape on a key */
-export function toggleLShape(id: string): void {
-  pushHistory()
+export const toggleLShape = withHistory((id: string): void => {
   const idx = state.keys.findIndex(k => k.id === id)
   if (idx === -1) return
   const key = state.keys[idx]
@@ -582,24 +578,22 @@ export function toggleLShape(id: string): void {
     setState('keys', idx, 'lshape', undefined as any)
   else
     setState('keys', idx, 'lshape', { x2: 0, y2: 0, w2: key.w, h2: key.h } as any)
-}
+})
 
 // ── Layout Variant Actions ─────────────────────────────────────────────────────
 
 /** Add a new layout option group */
-export function addOptionGroup(name: string): number {
-  pushHistory()
+export const addOptionGroup = withHistory((name: string): number => {
   const id = state.optionGroups.length === 0 ? 0 : Math.max(...state.optionGroups.map(g => g.id)) + 1
   const defaultChoice = { id: 0, name: 'Default' }
   const altChoice = { id: 1, name: 'Alternate' }
   setState('optionGroups', prev => [...prev, { id, name, choices: [defaultChoice, altChoice] }])
   setState('activeChoices', id, 0)
   return id
-}
+})
 
 /** Remove an option group */
-export function removeOptionGroup(groupId: number): void {
-  pushHistory()
+export const removeOptionGroup = withHistory((groupId: number): void => {
   // Clear option from all keys in this group
   setState('keys', produce((keys) => {
     for (const key of keys) {
@@ -611,7 +605,7 @@ export function removeOptionGroup(groupId: number): void {
   const newActive = { ...state.activeChoices }
   delete newActive[groupId]
   setState('activeChoices', newActive)
-}
+})
 
 /** Set active choice for a group */
 export function setActiveChoice(groupId: number, choiceId: number): void {
@@ -620,20 +614,18 @@ export function setActiveChoice(groupId: number, choiceId: number): void {
 }
 
 /** Assign a key to a layout option */
-export function assignKeyOption(keyId: string, groupId: number, choiceId: number): void {
-  pushHistory()
+export const assignKeyOption = withHistory((keyId: string, groupId: number, choiceId: number): void => {
   const idx = state.keys.findIndex(k => k.id === keyId)
   if (idx === -1) return
   setState('keys', idx, 'option', { groupId, choiceId })
-}
+})
 
 /** Remove a key from its layout option */
-export function removeKeyOption(keyId: string): void {
-  pushHistory()
+export const removeKeyOption = withHistory((keyId: string): void => {
   const idx = state.keys.findIndex(k => k.id === keyId)
   if (idx === -1) return
   setState('keys', idx, 'option', undefined as any)
-}
+})
 
 /** Check if a key is visible given current active choices */
 export function isKeyVisible(key: KeyData): boolean {
@@ -642,22 +634,20 @@ export function isKeyVisible(key: KeyData): boolean {
 }
 
 /** Add a choice to an existing option group */
-export function addOptionChoice(groupId: number, name: string): void {
-  pushHistory()
+export const addOptionChoice = withHistory((groupId: number, name: string): void => {
   const group = state.optionGroups.find(g => g.id === groupId)
   if (!group) return
   const choiceId = group.choices.length === 0 ? 0 : Math.max(...group.choices.map(c => c.id)) + 1
   const groupIdx = state.optionGroups.findIndex(g => g.id === groupId)
   setState('optionGroups', groupIdx, 'choices', prev => [...prev, { id: choiceId, name }])
-}
+})
 
 /** Rename an option group */
-export function renameOptionGroup(groupId: number, name: string): void {
-  pushHistory()
+export const renameOptionGroup = withHistory((groupId: number, name: string): void => {
   const idx = state.optionGroups.findIndex(g => g.id === groupId)
   if (idx === -1) return
   setState('optionGroups', idx, 'name', name)
-}
+})
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
