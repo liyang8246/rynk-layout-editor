@@ -8,7 +8,7 @@ interface KeyCapProps {
   onDragStart?: (startX: number, startY: number) => void
 }
 
-const FACE_GAP = 2 // px, m-0.5 ≈ 2px
+const FACE_GAP = 1 // px, thin border
 
 export function KeyCap(props: KeyCapProps) {
   const handlePointerDown = (e: PointerEvent) => {

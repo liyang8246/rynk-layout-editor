@@ -77,7 +77,7 @@ export interface LayoutState {
 // ── Constants ──────────────────────────────────────────────────────────────────
 
 /** Size of one key unit in pixels */
-export const KEY_UNIT = 60
+export const KEY_UNIT = 64
 
 /** Arrow key step sizes */
 export const STEP_FINE = 0.25

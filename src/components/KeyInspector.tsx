@@ -53,7 +53,7 @@ function KeyPanel(props: { keyData: KeyData }) {
                 type="number"
                 step="0.25"
                 class="grow"
-                value={k().x}
+                value={parseFloat(k().x.toFixed(3))}
                 onChange={e => updateKey(k().id, { x: Number.parseFloat(e.currentTarget.value) || 0 })}
               />
             </label>
@@ -63,7 +63,7 @@ function KeyPanel(props: { keyData: KeyData }) {
                 type="number"
                 step="0.25"
                 class="grow"
-                value={k().y}
+                value={parseFloat(k().y.toFixed(3))}
                 onChange={e => updateKey(k().id, { y: Number.parseFloat(e.currentTarget.value) || 0 })}
               />
             </label>
@@ -81,7 +81,7 @@ function KeyPanel(props: { keyData: KeyData }) {
                 step="0.25"
                 min="0.25"
                 class="grow"
-                value={k().w}
+                value={parseFloat(k().w.toFixed(3))}
                 onChange={e => updateKey(k().id, { w: Number.parseFloat(e.currentTarget.value) || 1 })}
               />
             </label>
@@ -92,7 +92,7 @@ function KeyPanel(props: { keyData: KeyData }) {
                 step="0.25"
                 min="0.25"
                 class="grow"
-                value={k().h}
+                value={parseFloat(k().h.toFixed(3))}
                 onChange={e => updateKey(k().id, { h: Number.parseFloat(e.currentTarget.value) || 1 })}
               />
             </label>
@@ -108,7 +108,7 @@ function KeyPanel(props: { keyData: KeyData }) {
               type="number"
               step="1"
               class="grow"
-              value={k().r}
+              value={parseFloat(k().r.toFixed(3))}
               onChange={e => updateKey(k().id, { r: Number.parseFloat(e.currentTarget.value) || 0 })}
             />
             <span class="text-xs text-base-content/40">deg</span>
@@ -125,7 +125,7 @@ function KeyPanel(props: { keyData: KeyData }) {
                 type="number"
                 step="0.25"
                 class="grow"
-                value={k().rx}
+                value={parseFloat(k().rx.toFixed(3))}
                 onChange={e => updateKey(k().id, { rx: Number.parseFloat(e.currentTarget.value) || 0 })}
               />
             </label>
@@ -135,7 +135,7 @@ function KeyPanel(props: { keyData: KeyData }) {
                 type="number"
                 step="0.25"
                 class="grow"
-                value={k().ry}
+                value={parseFloat(k().ry.toFixed(3))}
                 onChange={e => updateKey(k().id, { ry: Number.parseFloat(e.currentTarget.value) || 0 })}
               />
             </label>
@@ -163,7 +163,7 @@ function KeyPanel(props: { keyData: KeyData }) {
                   type="number"
                   step="0.25"
                   class="grow"
-                  value={k().lshape!.x2}
+                  value={parseFloat(k().lshape!.x2.toFixed(3))}
                   onChange={e => updateKeyLshape(k().id, 'x2', Number.parseFloat(e.currentTarget.value) || 0)}
                 />
               </label>
@@ -173,7 +173,7 @@ function KeyPanel(props: { keyData: KeyData }) {
                   type="number"
                   step="0.25"
                   class="grow"
-                  value={k().lshape!.y2}
+                  value={parseFloat(k().lshape!.y2.toFixed(3))}
                   onChange={e => updateKeyLshape(k().id, 'y2', Number.parseFloat(e.currentTarget.value) || 0)}
                 />
               </label>
@@ -186,7 +186,7 @@ function KeyPanel(props: { keyData: KeyData }) {
                   step="0.25"
                   min="0.25"
                   class="grow"
-                  value={k().lshape!.w2}
+                  value={parseFloat(k().lshape!.w2.toFixed(3))}
                   onChange={e => updateKeyLshape(k().id, 'w2', Number.parseFloat(e.currentTarget.value) || 1)}
                 />
               </label>
@@ -197,7 +197,7 @@ function KeyPanel(props: { keyData: KeyData }) {
                   step="0.25"
                   min="0.25"
                   class="grow"
-                  value={k().lshape!.h2}
+                  value={parseFloat(k().lshape!.h2.toFixed(3))}
                   onChange={e => updateKeyLshape(k().id, 'h2', Number.parseFloat(e.currentTarget.value) || 1)}
                 />
               </label>
@@ -310,7 +310,7 @@ function PinPanel(props: { pin: PinData }) {
                 type="number"
                 step="0.25"
                 class="grow"
-                value={p().x}
+                value={parseFloat(p().x.toFixed(3))}
                 onChange={e => updatePin(p().id, { x: Number.parseFloat(e.currentTarget.value) || 0 })}
               />
             </label>
@@ -320,7 +320,7 @@ function PinPanel(props: { pin: PinData }) {
                 type="number"
                 step="0.25"
                 class="grow"
-                value={p().y}
+                value={parseFloat(p().y.toFixed(3))}
                 onChange={e => updatePin(p().id, { y: Number.parseFloat(e.currentTarget.value) || 0 })}
               />
             </label>
@@ -357,7 +357,7 @@ function EncoderPanel(props: { encoder: EncoderData }) {
               type="number"
               step="0.25"
               class="grow"
-              value={enc().x}
+              value={parseFloat(enc().x.toFixed(3))}
               onChange={e => updateEncoder(enc().id, { x: Number.parseFloat(e.currentTarget.value) || 0 })}
             />
           </label>
@@ -367,7 +367,7 @@ function EncoderPanel(props: { encoder: EncoderData }) {
               type="number"
               step="0.25"
               class="grow"
-              value={enc().y}
+              value={parseFloat(enc().y.toFixed(3))}
               onChange={e => updateEncoder(enc().id, { y: Number.parseFloat(e.currentTarget.value) || 0 })}
             />
           </label>
