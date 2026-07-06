@@ -342,13 +342,17 @@ export function hasSelectedKeys(): boolean {
 
 // ── Actions ────────────────────────────────────────────────────────────────────
 
-/** Add a new key at the given grid position (top-left) */
-export const addKey = withHistory((x: number, y: number): string => {
+/** Add a new key at the next available position (y=0, first free x) */
+export const addKey = withHistory((): string => {
   const id = nanoid()
+  // Find next free x at y=0
+  const occupied = new Set(state.keys.filter(k => k.y === 0).map(k => k.x))
+  let x = 0
+  while (occupied.has(x)) x++
   setState('keys', prev => [...prev, {
     id,
     x,
-    y,
+    y: 0,
     w: 1,
     h: 1,
     r: 0,

@@ -124,7 +124,7 @@ export function Toolbar() {
 
       <div class="divider divider-horizontal mx-1" />
 
-      <button class="btn btn-sm btn-primary" onClick={() => addKey(5, 3)}>
+      <button class="btn btn-sm btn-primary" onClick={() => addKey()}>
         Add Key
       </button>
 
