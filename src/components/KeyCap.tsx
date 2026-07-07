@@ -8,7 +8,7 @@ interface KeyCapProps {
   onDragStart?: (startX: number, startY: number) => void
 }
 
-const FACE_GAP = 1 // px, thin border
+const FACE_GAP = 2 // px, thin border
 
 export function KeyCap(props: KeyCapProps) {
   const handlePointerDown = (e: PointerEvent) => {
@@ -42,10 +42,10 @@ export function KeyCap(props: KeyCapProps) {
       onPointerDown={handlePointerDown}
     >
       {/* Border layer: two rects forming the L-shape border */}
-      <div class="absolute inset-0 rounded-md">
+      <div class="absolute inset-0 rounded-lg">
         {/* Primary border rect */}
         <div
-          class="absolute inset-0 rounded-md"
+          class="absolute inset-0 rounded-lg"
           classList={{
             'bg-primary': props.selected,
             'bg-base-300': !props.selected,
@@ -58,7 +58,7 @@ export function KeyCap(props: KeyCapProps) {
             const ls = lshape()
             return (
               <div
-                class="absolute rounded-md"
+                class="absolute rounded-lg"
                 classList={{
                   'bg-primary': props.selected,
                   'bg-base-300': !props.selected,

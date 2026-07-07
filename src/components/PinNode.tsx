@@ -7,8 +7,6 @@ interface PinNodeProps {
   onDragStart?: (startX: number, startY: number) => void
 }
 
-const FACE_GAP = 2 // px
-
 export function PinNode(props: PinNodeProps) {
   const handlePointerDown = (e: PointerEvent) => {
     if (e.button !== 0) return
@@ -34,11 +32,13 @@ export function PinNode(props: PinNodeProps) {
 
   return (
     <div
-      class="absolute"
+      class="absolute flex items-center justify-center bg-base-200 rounded-lg ring-2"
       classList={{
         'cursor-grab': props.selected && !isDragging(),
         'cursor-grabbing': props.selected && isDragging(),
         'cursor-pointer': !props.selected,
+        'ring-primary': props.selected,
+        'ring-base-300': !props.selected,
       }}
       style={{
         left: `${props.pin.x * KEY_UNIT}px`,
@@ -48,40 +48,15 @@ export function PinNode(props: PinNodeProps) {
       }}
       onPointerDown={handlePointerDown}
     >
-      {/* Border layer */}
-      <div
-        class="absolute inset-0 rounded-sm"
+      <span
+        class="text-xs font-bold select-none"
         classList={{
-          'bg-primary': props.selected,
-          'bg-sky-500': !props.selected && props.pin.direction === 'row',
-          'bg-rose-500': !props.selected && props.pin.direction === 'col',
-        }}
-      />
-
-      {/* Face layer */}
-      <div
-        class="absolute flex items-center justify-center rounded-sm"
-        classList={{
-          'bg-sky-500/20': props.pin.direction === 'row',
-          'bg-rose-500/20': props.pin.direction === 'col',
-        }}
-        style={{
-          left: `${FACE_GAP}px`,
-          top: `${FACE_GAP}px`,
-          right: `${FACE_GAP}px`,
-          bottom: `${FACE_GAP}px`,
+          'text-info': props.pin.direction === 'row',
+          'text-error': props.pin.direction === 'col',
         }}
       >
-        <span
-          class="text-xs font-bold select-none"
-          classList={{
-            'text-sky-900': props.pin.direction === 'row',
-            'text-rose-900': props.pin.direction === 'col',
-          }}
-        >
-          {label()}
-        </span>
-      </div>
+        {label()}
+      </span>
     </div>
   )
 }
