@@ -13,27 +13,28 @@ import {
   updatePin,
 } from '../stores/layout'
 
+function fmt(v: number): string {
+  const s = v.toFixed(3)
+  return s.replace(/0+$/, '').replace(/\.$/, '')
+}
+
 function NumInput(props: {
   label: string
   value: number
-  step?: number
-  min?: number
   onChange: (v: number) => void
 }) {
   return (
-    <label class="input input-sm">
-      <span class="label">{props.label}</span>
+    <label class="input input-sm font-mono">
+      <span class="label font-mono">{props.label}</span>
       <input
-        type="number"
-        step={props.step ?? 0.25}
-        min={props.min}
-        value={props.value}
+        type="text"
+        value={fmt(props.value)}
         onChange={(e) => {
           const v = Number.parseFloat(e.currentTarget.value)
           if (!Number.isNaN(v))
             props.onChange(v)
         }}
-        onKeyDown={e => e.key === 'Enter' && e.currentTarget.blur()}
+        onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
       />
     </label>
   )
