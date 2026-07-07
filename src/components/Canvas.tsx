@@ -308,104 +308,90 @@ export function Canvas() {
     }
 
     // bg SVG: non-highlighted lines (behind keys)
-    while (svgBgRef.firstChild) svgBgRef.removeChild(svgBgRef.firstChild)
+    while (svgBg.firstChild) svgBg.removeChild(svgBg.firstChild)
     for (const line of lines) {
-      if (!line.highlighted) svgBgRef.appendChild(makeLineEl(line))
+      if (!line.highlighted) svgBg.appendChild(makeLineEl(line))
     }
 
     // fg SVG: highlighted lines (on top of keys)
-    while (svgFgRef.firstChild) svgFgRef.removeChild(svgFgRef.firstChild)
+    while (svgFg.firstChild) svgFg.removeChild(svgFg.firstChild)
     for (const line of lines) {
-      if (line.highlighted) svgFgRef.appendChild(makeLineEl(line))
+      if (line.highlighted) svgFg.appendChild(makeLineEl(line))
     }
   })
 
   return (
-    <div class="flex-1 overflow-auto bg-base-100 p-4">
-      <div
-        ref={canvasRef}
-        class="relative select-none w-full h-full"
-        classList={{
-          'cursor-grabbing': isDragging(),
-        }}
-        onMouseDown={handleCanvasMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-      >
-        {/* Grid major lines (every 5u) */}
-        <div
-          class="pointer-events-none absolute inset-0"
-          style={{
-            'background-image': `
-              linear-gradient(to right, hsl(var(--bc) / 0.15) 1px, transparent 1px),
-              linear-gradient(to bottom, hsl(var(--bc) / 0.15) 1px, transparent 1px)
-            `,
-            'background-size': `${KEY_UNIT * 5}px ${KEY_UNIT * 5}px`,
-          }}
-        />
+    <div
+      ref={canvasRef}
+      class="relative h-full w-full select-none"
+      classList={{
+        'cursor-grabbing': isDragging(),
+      }}
+      onMouseDown={handleCanvasMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+    >
+      {/* Wiring lines SVG — background (non-highlighted, behind keys) */}
+      <svg
+        ref={svgBgRef}
+        class="pointer-events-none absolute inset-0"
+        style={{ width: '100%', height: '100%' }}
+      />
 
-        {/* Wiring lines SVG — background (non-highlighted, behind keys) */}
-        <svg
-          ref={svgBgRef}
-          class="pointer-events-none absolute inset-0"
-          style={{ width: '100%', height: '100%' }}
-        />
+      {/* Keys */}
+      <For each={state.keys.filter(isKeyVisible)}>
+        {key => (
+          <KeyCap
+            key={key}
+            selected={state.selectedIds.includes(key.id)}
+            onDragStart={handleDragStart}
+          />
+        )}
+      </For>
 
-        {/* Keys */}
-        <For each={state.keys.filter(isKeyVisible)}>
-          {key => (
-            <KeyCap
-              key={key}
-              selected={state.selectedIds.includes(key.id)}
-              onDragStart={handleDragStart}
-            />
-          )}
-        </For>
+      {/* Encoders */}
+      <For each={state.encoders}>
+        {encoder => (
+          <EncoderKnob
+            encoder={encoder}
+            selected={state.selectedIds.includes(encoder.id)}
+            onDragStart={handleDragStart}
+          />
+        )}
+      </For>
 
-        {/* Encoders */}
-        <For each={state.encoders}>
-          {encoder => (
-            <EncoderKnob
-              encoder={encoder}
-              selected={state.selectedIds.includes(encoder.id)}
-              onDragStart={handleDragStart}
-            />
-          )}
-        </For>
+      {/* Pins */}
+      <For each={state.pins}>
+        {pin => (
+          <PinNode
+            pin={pin}
+            selected={state.selectedIds.includes(pin.id)}
+            onDragStart={handleDragStart}
+          />
+        )}
+      </For>
 
-        {/* Pins */}
-        <For each={state.pins}>
-          {pin => (
-            <PinNode
-              pin={pin}
-              selected={state.selectedIds.includes(pin.id)}
-              onDragStart={handleDragStart}
-            />
-          )}
-        </For>
+      {/* Wiring lines SVG — foreground (highlighted, on top of keys) */}
+      <svg
+        ref={svgFgRef}
+        class="pointer-events-none absolute inset-0"
+        style={{ width: '100%', height: '100%' }}
+      />
 
-        {/* Wiring lines SVG — foreground (highlighted, on top of keys) */}
-        <svg
-          ref={svgFgRef}
-          class="pointer-events-none absolute inset-0"
-          style={{ width: '100%', height: '100%' }}
-        />
-
-        {/* Rubber-band selection rectangle */}
-        <Show when={rubberBandRect()}>
-          {rect => (
-            <div
-              class="pointer-events-none absolute border-2 border-primary/50 bg-primary/10"
-              style={{
-                left: `${rect().left}px`,
-                top: `${rect().top}px`,
-                width: `${rect().width}px`,
-                height: `${rect().height}px`,
-              }}
-            />
-          )}
-        </Show>
-      </div>
+      {/* Rubber-band selection rectangle */}
+      <Show when={rubberBandRect()}>
+        {rect => (
+          <div
+            class="pointer-events-none absolute border-2 border-primary/50 bg-primary/10"
+            style={{
+              left: `${rect().left}px`,
+              top: `${rect().top}px`,
+              width: `${rect().width}px`,
+              height: `${rect().height}px`,
+            }}
+          />
+        )}
+      </Show>
     </div>
   )
 }

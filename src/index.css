@@ -1,6 +1,13 @@
 @import "tailwindcss";
 @plugin "daisyui";
+@plugin "@iconify/tailwind4";
 
-:root {
-  --key-unit: 64px;
+@utility grid-canvas {
+  background-color: var(--color-base-100);
+  background-image:
+    linear-gradient(to right, var(--color-base-200) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--color-base-200) 1px, transparent 1px);
+  background-size: 64px 64px;
 }
+
+

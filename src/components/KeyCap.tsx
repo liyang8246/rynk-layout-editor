@@ -16,11 +16,9 @@ export function KeyCap(props: KeyCapProps) {
     e.stopPropagation()
 
     if (props.selected) {
-      // Already selected: start drag (keep current multi-selection)
       props.onDragStart?.(e.clientX, e.clientY)
     }
     else {
-      // Not selected: select it (no drag this click)
       selectItem(props.key.id, e.ctrlKey || e.metaKey)
     }
   }
