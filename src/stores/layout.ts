@@ -502,7 +502,7 @@ export const updatePin = withHistory((id: string, updates: Partial<Omit<PinData,
   setState('pins', idx, updates as any)
 })
 
-/** Connect all selected keys to the given pin (assign row/col) */
+/** Connect all selected keys to the given pin (assign row/col), then select the pin */
 export const connectSelectedToPin = withHistory((pinId: string): void => {
   const pin = state.pins.find(p => p.id === pinId)
   if (!pin) return
@@ -516,6 +516,7 @@ export const connectSelectedToPin = withHistory((pinId: string): void => {
         key.col = pin.index
     }
   }))
+  selectItem(pinId, false)
 })
 
 /** Set matrix dimensions */

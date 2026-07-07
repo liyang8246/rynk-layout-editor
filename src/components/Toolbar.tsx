@@ -77,6 +77,23 @@ export function Toolbar() {
         <span class="icon-[lucide--trash]" />
         <span>Delete</span>
       </button>
+      <div class="h-8 w-[1px] bg-base-300" />
+      <button
+        class="flex cursor-pointer items-center gap-1 rounded-xl p-2 text-sm hover:bg-base-300"
+        disabled={!hasSelection()}
+        onClick={deleteSelected}
+      >
+        <span class="icon-[lucide--upload]" />
+        <span>Kle / Vail</span>
+      </button>
+      <button
+        class="flex cursor-pointer items-center gap-1 rounded-xl p-2 text-sm hover:bg-base-300"
+        disabled={!hasSelection()}
+        onClick={deleteSelected}
+      >
+        <span class="icon-[lucide--download]" />
+        <span>Rynk</span>
+      </button>
     </div>
   )
 }
