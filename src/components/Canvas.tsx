@@ -1,4 +1,5 @@
 import { createEffect, createMemo, createSignal, For, Show } from 'solid-js'
+import { Portal } from 'solid-js/web'
 import {
   deselectAll,
   endItemDrag,
@@ -64,13 +65,49 @@ export function Canvas() {
     if (e.target !== e.currentTarget) return
 
     const pos = getCanvasPos(e)
-    setRubberBand({
+    const rbState: RubberBandState = {
       startX: pos.x,
       startY: pos.y,
       currentX: pos.x,
       currentY: pos.y,
       additive: e.ctrlKey || e.metaKey,
-    })
+    }
+    setRubberBand(rbState)
+
+    // Attach document-level listeners so rubber-band continues even if pointer leaves canvas
+    const onMove = (ev: PointerEvent) => {
+      const rb = rubberBand()
+      if (!rb) return
+      const p = getCanvasPos(ev)
+      setRubberBand({ ...rb, currentX: p.x, currentY: p.y })
+    }
+
+    const onUp = (ev: PointerEvent) => {
+      const rb = rubberBand()
+      if (!rb) return
+
+      const pos = getCanvasPos(ev)
+      const ux1 = pxToUnit(rb.startX)
+      const uy1 = pxToUnit(rb.startY)
+      const ux2 = pxToUnit(pos.x)
+      const uy2 = pxToUnit(pos.y)
+
+      const dx = Math.abs(ux2 - ux1)
+      const dy = Math.abs(uy2 - uy1)
+      if (dx < 0.1 && dy < 0.1) {
+        if (!rb.additive) deselectAll()
+      }
+      else {
+        selectItemsInRect(ux1, uy1, ux2, uy2, rb.additive)
+      }
+
+      setRubberBand(null)
+      document.removeEventListener('pointermove', onMove)
+      document.removeEventListener('pointerup', onUp)
+    }
+
+    document.addEventListener('pointermove', onMove)
+    document.addEventListener('pointerup', onUp)
   }
 
   // ── Item drag (started from KeyCap/EncoderKnob) ────────────────────────────
@@ -99,45 +136,17 @@ export function Canvas() {
     document.addEventListener('pointerup', onUp)
   }
 
-  // ── Global mouse move/up for rubber-band ───────────────────────────────────
-
-  const handleMouseMove = (e: MouseEvent) => {
-    const rb = rubberBand()
-    if (!rb) return
-
-    const pos = getCanvasPos(e)
-    setRubberBand({ ...rb, currentX: pos.x, currentY: pos.y })
-  }
-
-  const handleMouseUp = (e: MouseEvent) => {
-    const rb = rubberBand()
-    if (!rb) return
-
-    const pos = getCanvasPos(e)
-    const ux1 = pxToUnit(rb.startX)
-    const uy1 = pxToUnit(rb.startY)
-    const ux2 = pxToUnit(pos.x)
-    const uy2 = pxToUnit(pos.y)
-
-    const dx = Math.abs(ux2 - ux1)
-    const dy = Math.abs(uy2 - uy1)
-    if (dx < 0.1 && dy < 0.1) {
-      if (!rb.additive) deselectAll()
-    }
-    else {
-      selectItemsInRect(ux1, uy1, ux2, uy2, rb.additive)
-    }
-
-    setRubberBand(null)
-  }
-
   // ── Rubber-band rect computation ───────────────────────────────────────────
 
   const rubberBandRect = () => {
     const rb = rubberBand()
     if (!rb) return null
-    const left = Math.min(rb.startX, rb.currentX)
-    const top = Math.min(rb.startY, rb.currentY)
+    // Canvas internal coords → viewport coords for Portal rendering
+    const rect = canvasRef.getBoundingClientRect()
+    const offsetX = rect.left - canvasRef.scrollLeft
+    const offsetY = rect.top - canvasRef.scrollTop
+    const left = Math.min(rb.startX, rb.currentX) + offsetX
+    const top = Math.min(rb.startY, rb.currentY) + offsetY
     const width = Math.abs(rb.currentX - rb.startX)
     const height = Math.abs(rb.currentY - rb.startY)
     if (width < 3 && height < 3) return null
@@ -327,8 +336,6 @@ export function Canvas() {
         'cursor-grabbing': isDragging(),
       }}
       onMouseDown={handleCanvasMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
     >
       {/* Wiring lines SVG — background (non-highlighted, behind keys) */}
       <svg
@@ -377,20 +384,22 @@ export function Canvas() {
         style={{ width: '100%', height: '100%' }}
       />
 
-      {/* Rubber-band selection rectangle */}
-      <Show when={rubberBandRect()}>
-        {rect => (
-          <div
-            class="pointer-events-none absolute border-2 border-primary/50 bg-primary/10"
-            style={{
-              left: `${rect().left}px`,
-              top: `${rect().top}px`,
-              width: `${rect().width}px`,
-              height: `${rect().height}px`,
-            }}
-          />
-        )}
-      </Show>
+      {/* Rubber-band selection rectangle — rendered via Portal to escape grid cell clipping */}
+      <Portal mount={document.body}>
+        <Show when={rubberBandRect()}>
+          {rect => (
+            <div
+              class="pointer-events-none fixed border-2 border-primary/50 bg-primary/10"
+              style={{
+                left: `${rect().left}px`,
+                top: `${rect().top}px`,
+                width: `${rect().width}px`,
+                height: `${rect().height}px`,
+              }}
+            />
+          )}
+        </Show>
+      </Portal>
     </div>
   )
 }
