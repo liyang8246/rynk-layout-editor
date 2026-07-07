@@ -46,7 +46,7 @@ export function EncoderKnob(props: EncoderKnobProps) {
       />
       {/* Face */}
       <div
-        class="absolute flex items-center justify-center bg-accent/20 rounded-full"
+        class="absolute flex items-center justify-center rounded-full bg-accent/20"
         style={{
           left: '2px',
           top: '2px',

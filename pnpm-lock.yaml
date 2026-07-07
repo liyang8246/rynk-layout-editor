@@ -45,6 +45,9 @@ importers:
       eslint-plugin-solid:
         specifier: ^0.14.5
         version: 0.14.5(eslint@10.6.0(jiti@2.7.0))(typescript@6.0.3)
+      eslint-plugin-tailwindcss:
+        specifier: ^4.0.6
+        version: 4.0.6(eslint@10.6.0(jiti@2.7.0))(tailwindcss@4.3.2)(typescript@6.0.3)
       tailwindcss:
         specifier: ^4.3.2
         version: 4.3.2
@@ -1111,6 +1114,17 @@ packages:
       eslint: ^6.0.0 || ^7.0.0 || ^8.0.0 || ^9.0.0
       typescript: '>=4.8.4'
 
+  eslint-plugin-tailwindcss@4.0.6:
+    resolution: {integrity: sha512-87x/KWOSWSveCbfiGVWW5dNpU/oLfK/McHD9qwIzrfkJwF0LlWFI6ngEwgFpj4M3WYTHFngO07qBvaM1IDBKHA==}
+    engines: {node: '>=20.19.0'}
+    peerDependencies:
+      eslint: ^9.0.0 || ^10.0.0
+      tailwindcss: ^4.0.0
+      typescript: '*'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
   eslint-plugin-toml@1.4.0:
     resolution: {integrity: sha512-3ErTnfUjXq/23f72XeyRcE0Y4Sd/ME1lsZeezczqpn2R4tE7+Sgco/NUKDXm0xAMz15tzcRz/9RfJRm6AqRO+A==}
     engines: {node: ^20.19.0 || ^22.13.0 || >=24}
@@ -1763,6 +1777,12 @@ packages:
   pnpm-workspace-yaml@1.6.1:
     resolution: {integrity: sha512-yTeZntGWi8m9WNuhoVsP0DpFc4sC1U0+rr/qR6Zi9n2g3sxXY+JfccjXjjruNz96tM8I09yaJUA86doRnNLkbg==}
 
+  postcss-nested@7.0.2:
+    resolution: {integrity: sha512-5osppouFc0VR9/VYzYxO03VaDa3e8F23Kfd6/9qcZTUI8P58GIYlArOET2Wq0ywSl2o2PjELhYOFI4W7l5QHKw==}
+    engines: {node: '>=18.0'}
+    peerDependencies:
+      postcss: ^8.2.14
+
   postcss-selector-parser@7.1.4:
     resolution: {integrity: sha512-HeP7D2wyhkR+XaK6v4W8oRF62Dsz4flyuczALJp61GckGm42u1saSSJ/0auvcBqxs3jMRFEcPK34At/0JBKdOg==}
     engines: {node: '>=4'}
@@ -1889,6 +1909,11 @@ packages:
   synckit@0.11.13:
     resolution: {integrity: sha512-eNRKgb3z66Yp3D2CixVujOUvXLFUTij/zVnV8KRyvFdQwpz7I5DS8UfRkTeLzb64u+dkzDSdelE24izu+zSSUg==}
     engines: {node: ^14.18.0 || >=16.0.0}
+
+  tailwind-api-utils@1.0.3:
+    resolution: {integrity: sha512-KpzUHkH1ug1sq4394SLJX38ZtpeTiqQ1RVyFTTSY2XuHsNSTWUkRo108KmyyrMWdDbQrLYkSHaNKj/a3bmA4sQ==}
+    peerDependencies:
+      tailwindcss: ^3.3.0 || ^4.0.0 || ^4.0.0-beta
 
   tailwindcss@4.3.2:
     resolution: {integrity: sha512-WtctNNSH8A9jlMIqxzuYumOHU5uGZyRv0Q5svQl+oEPy5w84YpBxdb7MdqyiSPQge5jTJ6zFQLq0PFygdccSBA==}
@@ -3212,6 +3237,20 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  eslint-plugin-tailwindcss@4.0.6(eslint@10.6.0(jiti@2.7.0))(tailwindcss@4.3.2)(typescript@6.0.3):
+    dependencies:
+      '@typescript-eslint/utils': 8.62.1(eslint@10.6.0(jiti@2.7.0))(typescript@6.0.3)
+      eslint: 10.6.0(jiti@2.7.0)
+      postcss: 8.5.16
+      postcss-nested: 7.0.2(postcss@8.5.16)
+      synckit: 0.11.13
+      tailwind-api-utils: 1.0.3(tailwindcss@4.3.2)
+      tailwindcss: 4.3.2
+    optionalDependencies:
+      typescript: 6.0.3
+    transitivePeerDependencies:
+      - supports-color
+
   eslint-plugin-toml@1.4.0(eslint@10.6.0(jiti@2.7.0)):
     dependencies:
       '@eslint/core': 1.2.1
@@ -4017,6 +4056,11 @@ snapshots:
     dependencies:
       yaml: 2.9.0
 
+  postcss-nested@7.0.2(postcss@8.5.16):
+    dependencies:
+      postcss: 8.5.16
+      postcss-selector-parser: 7.1.4
+
   postcss-selector-parser@7.1.4:
     dependencies:
       cssesc: 3.0.0
@@ -4149,6 +4193,13 @@ snapshots:
   synckit@0.11.13:
     dependencies:
       '@pkgr/core': 0.3.6
+
+  tailwind-api-utils@1.0.3(tailwindcss@4.3.2):
+    dependencies:
+      enhanced-resolve: 5.24.1
+      jiti: 2.7.0
+      local-pkg: 1.2.1
+      tailwindcss: 4.3.2
 
   tailwindcss@4.3.2: {}
 

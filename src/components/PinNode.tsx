@@ -32,7 +32,7 @@ export function PinNode(props: PinNodeProps) {
 
   return (
     <div
-      class="absolute flex items-center justify-center bg-base-200 rounded-lg ring-2"
+      class="absolute flex items-center justify-center rounded-lg bg-base-200 ring-2"
       classList={{
         'cursor-grab': props.selected && !isDragging(),
         'cursor-grabbing': props.selected && isDragging(),

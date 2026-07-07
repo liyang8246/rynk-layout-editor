@@ -16,30 +16,30 @@ export function VariantPanel() {
     <div class="flex flex-col gap-2">
       <div class="flex items-center justify-between">
         <span class="text-xs font-semibold text-base-content/70">Layout Variants</span>
-        <button class="btn btn-xs btn-primary btn-outline" onClick={() => addOptionGroup(`Group ${state.optionGroups.length + 1}`)}>
+        <button class="btn btn-outline btn-primary btn-xs" onClick={() => addOptionGroup(`Group ${state.optionGroups.length + 1}`)}>
           + Group
         </button>
       </div>
 
       <Show when={state.optionGroups.length === 0}>
-        <p class="text-xs text-base-content/40 text-center">No variant groups</p>
+        <p class="text-center text-xs text-base-content/40">No variant groups</p>
       </Show>
 
       <For each={state.optionGroups}>
         {group => (
-          <div class="bg-base-300/30 rounded-md p-2 flex flex-col gap-1.5">
+          <div class="flex flex-col gap-1.5 rounded-md bg-base-300/30 p-2">
             <div class="flex items-center gap-1">
               <input
                 type="text"
-                class="input input-xs input-bordered flex-1"
+                class="input-bordered input flex-1 input-xs"
                 value={group.name}
                 onChange={e => renameOptionGroup(group.id, e.currentTarget.value)}
               />
-              <button class="btn btn-xs btn-ghost btn-circle text-error" onClick={() => removeOptionGroup(group.id)}>✕</button>
+              <button class="btn btn-circle btn-ghost text-error btn-xs" onClick={() => removeOptionGroup(group.id)}>✕</button>
             </div>
 
             {/* Active choice selector */}
-            <div class="flex gap-1 flex-wrap">
+            <div class="flex flex-wrap gap-1">
               <For each={group.choices}>
                 {choice => (
                   <button
@@ -55,7 +55,7 @@ export function VariantPanel() {
                 )}
               </For>
               <button
-                class="btn btn-xs btn-ghost btn-circle"
+                class="btn btn-circle btn-ghost btn-xs"
                 onClick={() => addOptionChoice(group.id, `Choice ${group.choices.length}`)}
               >
                 +
@@ -65,12 +65,12 @@ export function VariantPanel() {
             {/* Assign selected key to this group/choice */}
             <Show when={selectedKey()}>
               {k => (
-                <div class="flex gap-1 flex-wrap">
+                <div class="flex flex-wrap gap-1">
                   <span class="text-xs text-base-content/50">Assign:</span>
                   <For each={group.choices}>
                     {choice => (
                       <button
-                        class="btn btn-xs btn-outline"
+                        class="btn btn-outline btn-xs"
                         classList={{
                           'btn-active': k().option?.groupId === group.id && k().option?.choiceId === choice.id,
                         }}
@@ -81,7 +81,7 @@ export function VariantPanel() {
                     )}
                   </For>
                   <Show when={k().option?.groupId === group.id}>
-                    <button class="btn btn-xs btn-ghost text-error" onClick={() => removeKeyOption(k().id)}>
+                    <button class="btn btn-ghost text-error btn-xs" onClick={() => removeKeyOption(k().id)}>
                       Clear
                     </button>
                   </Show>

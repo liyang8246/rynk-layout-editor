@@ -77,7 +77,7 @@ export function KeyCap(props: KeyCapProps) {
 
       {/* Face layer: primary face (inset by FACE_GAP) */}
       <div
-        class="absolute flex items-center justify-center bg-base-200 rounded-md"
+        class="absolute flex items-center justify-center rounded-md bg-base-200"
         style={{
           left: `${FACE_GAP}px`,
           top: `${FACE_GAP}px`,
@@ -97,7 +97,7 @@ export function KeyCap(props: KeyCapProps) {
           const ls = lshape()
           return (
             <div
-              class="absolute bg-base-200 rounded-md"
+              class="absolute rounded-md bg-base-200"
               style={{
                 left: `${ls.x2 * KEY_UNIT + FACE_GAP}px`,
                 top: `${ls.y2 * KEY_UNIT + FACE_GAP}px`,

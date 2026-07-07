@@ -13,7 +13,7 @@ import {
 
 export function Toolbar() {
   return (
-    <div class="mr-auto mt-auto flex h-12 w-fit items-center justify-start gap-1 rounded-xl bg-base-100 px-2 py-1 shadow-lg ring ring-base-300">
+    <div class="mt-auto mr-auto flex h-12 w-fit items-center justify-start gap-1 rounded-xl bg-base-100 px-2 py-1 shadow-lg ring ring-base-300">
       <button
         class="flex cursor-pointer items-center gap-1 rounded-xl p-2 text-sm hover:bg-base-300"
         onClick={() => addKey()}

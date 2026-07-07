@@ -322,7 +322,7 @@ export function Canvas() {
   return (
     <div
       ref={canvasRef}
-      class="relative h-full w-full select-none"
+      class="relative size-full select-none"
       classList={{
         'cursor-grabbing': isDragging(),
       }}

@@ -1,17 +1,34 @@
 import antfu from '@antfu/eslint-config'
+import tailwindcss from 'eslint-plugin-tailwindcss'
 
-export default antfu(
+const tailwindRecommended = tailwindcss.configs.recommended as Record<string, any>
+
+export default [
+  ...await antfu(
+    {
+      solid: true,
+      ignores: ['src/wasm/rynk-kle/**'],
+      rules: {
+        'antfu/if-newline': 'off',
+      },
+    },
+    {
+      files: ['src/components/Toolbar.tsx'],
+      rules: {
+        'no-alert': 'off',
+      },
+    },
+  ),
   {
-    solid: true,
-    ignores: ['src/wasm/rynk-kle/**'],
+    ...tailwindRecommended,
+    settings: {
+      tailwindcss: {
+        cssConfigPath: './src/index.css',
+      },
+    },
     rules: {
-      'antfu/if-newline': 'off',
+      ...tailwindRecommended.rules,
+      'tailwindcss/no-custom-classname': 'off',
     },
   },
-  {
-    files: ['src/components/Toolbar.tsx'],
-    rules: {
-      'no-alert': 'off',
-    },
-  },
-)
+]

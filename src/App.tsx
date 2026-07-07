@@ -15,8 +15,8 @@ function App() {
         {/* Header row */}
         <div class="flex h-24 w-full">
           {/* Logo pill — left */}
-          <div class="flex h-full max-w-lg flex-1 p-4 ring ring-base-300 grid-canvas">
-            <div class="ml-auto mt-auto flex h-12 w-64 justify-center rounded-xl bg-base-100 px-4 py-3 shadow-lg ring ring-base-300">
+          <div class="flex h-full max-w-lg flex-1 grid-canvas p-4 ring ring-base-300">
+            <div class="mt-auto ml-auto flex h-12 w-64 justify-center rounded-xl bg-base-100 px-4 py-3 shadow-lg ring ring-base-300">
               <h1 class="flex gap-1.5 text-base-content">
                 <img src="/logo.svg" alt="logo" class="h-6" />
                 <span class="font-bold">Layout Editor</span>
@@ -24,19 +24,19 @@ function App() {
             </div>
           </div>
           {/* Toolbar — right */}
-          <div class="flex h-full flex-2 p-4 ring ring-base-300 grid-canvas">
+          <div class="flex h-full flex-2 grid-canvas p-4 ring ring-base-300">
             <Toolbar />
           </div>
         </div>
 
         {/* Content row */}
-        <div class="flex flex-1 w-full">
+        <div class="flex w-full flex-1">
           {/* Properties panel — left */}
-          <div class="flex h-full max-w-lg flex-1 p-4 ring ring-base-300 grid-canvas">
+          <div class="flex h-full max-w-lg flex-1 grid-canvas p-4 ring ring-base-300">
             <KeyInspector />
           </div>
           {/* Canvas — right */}
-          <div class="h-full flex-2 p-4 ring ring-base-300 grid-canvas">
+          <div class="h-full flex-2 grid-canvas p-4 ring ring-base-300">
             <Canvas />
           </div>
         </div>
