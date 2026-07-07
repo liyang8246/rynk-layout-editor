@@ -21,6 +21,8 @@ function fmt(v: number): string {
 function NumInput(props: {
   label: string
   value: number
+  min?: number
+  step?: number
   onChange: (v: number) => void
 }) {
   return (
@@ -29,6 +31,8 @@ function NumInput(props: {
       <input
         type="text"
         value={fmt(props.value)}
+        min={props.min}
+        step={props.step}
         onChange={(e) => {
           const v = Number.parseFloat(e.currentTarget.value)
           if (!Number.isNaN(v))
