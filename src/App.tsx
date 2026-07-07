@@ -36,7 +36,7 @@ function App() {
             <KeyInspector />
           </div>
           {/* Canvas — right */}
-          <div class="h-full flex-2 grid-canvas p-4 ring ring-base-300">
+          <div class="h-full flex-2 grid-canvas ring ring-base-300">
             <Canvas />
           </div>
         </div>
