@@ -24,7 +24,7 @@ function NumInput(props: {
   onChange: (v: number) => void
 }) {
   return (
-    <label class="input input-sm font-mono">
+    <label class="input font-mono input-sm">
       <span class="label font-mono">{props.label}</span>
       <input
         type="text"
@@ -34,7 +34,7 @@ function NumInput(props: {
           if (!Number.isNaN(v))
             props.onChange(v)
         }}
-        onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+        onKeyDown={e => e.key === 'Enter' && e.currentTarget.blur()}
       />
     </label>
   )
@@ -42,7 +42,7 @@ function NumInput(props: {
 
 export function KeyInspector() {
   return (
-    <div class="mb-auto ml-auto flex h-fit w-64 flex-col gap-2 rounded-xl bg-base-100 px-4 py-3 shadow-lg ring ring-base-300">
+    <div class="mb-auto ml-auto flex h-fit w-64 flex-col gap-1 rounded-xl bg-base-100 px-4 py-3 shadow-lg ring ring-base-300">
       <p class="text-center text-sm font-bold text-base-content">Properties</p>
       <Switch fallback={<p class="text-center text-xs text-base-content/50">Select an item to edit</p>}>
         <Match when={state.selectedIds.length > 1}>
@@ -63,8 +63,7 @@ export function KeyInspector() {
                   <NumInput label="W" value={key.w} min={0.25} onChange={v => updateKey(key.id, { w: v })} />
                   <NumInput label="H" value={key.h} min={0.25} onChange={v => updateKey(key.id, { h: v })} />
                 </div>
-              </fieldset>
-              <div class="flex items-center gap-2 text-xs">
+                <label class="flex items-center gap-2 text-xs">
                   <input
                     type="checkbox"
                     class="toggle toggle-primary toggle-xs"
@@ -72,7 +71,7 @@ export function KeyInspector() {
                     onChange={() => toggleLShape(key.id)}
                   />
                   L-Shape
-                </div>
+                </label>
                 <Show when={key.lshape}>
                   <div class="grid grid-cols-2 gap-1">
                     <NumInput label="X2" value={key.lshape!.x2} onChange={v => updateKeyLshape(key.id, 'x2', v)} />
@@ -81,12 +80,13 @@ export function KeyInspector() {
                     <NumInput label="H2" value={key.lshape!.h2} min={0.25} onChange={v => updateKeyLshape(key.id, 'h2', v)} />
                   </div>
                 </Show>
+              </fieldset>
               <fieldset class="fieldset">
                 <legend class="fieldset-legend text-xs">Rotation</legend>
                 <div class="grid grid-cols-3 gap-1">
                   <NumInput label="R" value={key.r} step={1} onChange={v => updateKey(key.id, { r: v })} />
-                  <NumInput label="RX" value={key.rx} onChange={v => updateKey(key.id, { rx: v })} />
-                  <NumInput label="RY" value={key.ry} onChange={v => updateKey(key.id, { ry: v })} />
+                  <NumInput label="X" value={key.rx} onChange={v => updateKey(key.id, { rx: v })} />
+                  <NumInput label="Y" value={key.ry} onChange={v => updateKey(key.id, { ry: v })} />
                 </div>
               </fieldset>
               <Show when={state.optionGroups.length > 0}>
