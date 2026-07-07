@@ -10,7 +10,7 @@ function App() {
   })
 
   return (
-    <div class="grid h-screen w-screen grid-cols-[1fr_2fr] grid-rows-[6rem_1fr]">
+    <div class="grid h-screen w-screen grid-cols-[352px_1fr] 2xl:grid-cols-[1fr_2fr] grid-rows-[6rem_1fr]">
       {/* Logo pill — top-left */}
       <div class="flex grid-canvas p-4 ring ring-base-300">
         <div class="mt-auto ml-auto flex h-12 w-80 justify-center rounded-xl bg-base-100 px-4 py-3 shadow-lg ring ring-base-300">
