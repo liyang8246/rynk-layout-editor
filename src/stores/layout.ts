@@ -365,17 +365,24 @@ export const addKey = withHistory((): string => {
   return id
 })
 
-/** Add a new encoder at the given position (top-left) */
-export const addEncoder = withHistory((x: number, y: number): string => {
+/** Add a new encoder at the next available position (y=0, first free x) */
+export const addEncoder = withHistory((): string => {
   const id = nanoid()
   const nextIndex = state.encoders.length === 0
     ? 0
     : Math.max(...state.encoders.map(e => e.encoderIndex)) + 1
+  // Find next free x at y=0 (considering both keys and encoders)
+  const occupied = new Set([
+    ...state.keys.filter(k => k.y === 0).map(k => k.x),
+    ...state.encoders.filter(e => e.y === 0).map(e => e.x),
+  ])
+  let x = 0
+  while (occupied.has(x)) x++
   setState('encoders', prev => [...prev, {
     id,
     encoderIndex: nextIndex,
     x,
-    y,
+    y: 0,
   }])
   return id
 })

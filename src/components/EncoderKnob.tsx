@@ -41,12 +41,12 @@ export function EncoderKnob(props: EncoderKnobProps) {
         class="absolute inset-0 rounded-full"
         classList={{
           'bg-primary': props.selected,
-          'bg-accent': !props.selected,
+          'bg-base-300': !props.selected,
         }}
       />
       {/* Face */}
       <div
-        class="absolute flex items-center justify-center rounded-full bg-accent/20"
+        class="absolute flex items-center justify-center rounded-full bg-base-200"
         style={{
           left: '2px',
           top: '2px',
@@ -54,7 +54,7 @@ export function EncoderKnob(props: EncoderKnobProps) {
           bottom: '2px',
         }}
       >
-        <span class="text-sm font-bold text-accent select-none">
+        <span class="text-sm font-bold text-base-content/50 select-none">
           E
           {props.encoder.encoderIndex}
         </span>

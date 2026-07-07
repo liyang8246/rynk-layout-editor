@@ -23,7 +23,7 @@ export function Toolbar() {
       </button>
       <button
         class="flex cursor-pointer items-center gap-1 rounded-xl p-2 text-sm hover:bg-base-300"
-        onClick={() => addEncoder(5, 3)}
+        onClick={() => addEncoder()}
       >
         <span class="icon-[lucide--plus]" />
         <span>Encoder</span>
