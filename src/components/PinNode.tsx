@@ -53,13 +53,18 @@ export function PinNode(props: PinNodeProps) {
         class="absolute inset-0 rounded-sm"
         classList={{
           'bg-primary': props.selected,
-          'bg-secondary': !props.selected,
+          'bg-sky-500': !props.selected && props.pin.direction === 'row',
+          'bg-rose-500': !props.selected && props.pin.direction === 'col',
         }}
       />
 
       {/* Face layer */}
       <div
-        class="absolute flex items-center justify-center bg-secondary/20 rounded-sm"
+        class="absolute flex items-center justify-center rounded-sm"
+        classList={{
+          'bg-sky-500/20': props.pin.direction === 'row',
+          'bg-rose-500/20': props.pin.direction === 'col',
+        }}
         style={{
           left: `${FACE_GAP}px`,
           top: `${FACE_GAP}px`,
@@ -67,7 +72,13 @@ export function PinNode(props: PinNodeProps) {
           bottom: `${FACE_GAP}px`,
         }}
       >
-        <span class="text-xs font-bold text-secondary-content select-none">
+        <span
+          class="text-xs font-bold select-none"
+          classList={{
+            'text-sky-900': props.pin.direction === 'row',
+            'text-rose-900': props.pin.direction === 'col',
+          }}
+        >
           {label()}
         </span>
       </div>

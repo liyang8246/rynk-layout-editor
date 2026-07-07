@@ -291,8 +291,8 @@ export function Canvas() {
       canvas.removeChild(tmp)
       return color
     }
-    const rowColor = resolveColor('bg-secondary')
-    const colColor = resolveColor('bg-accent')
+    const rowColor = resolveColor('bg-sky-300')
+    const colColor = resolveColor('bg-rose-300')
 
     const makeLineEl = (line: WireLine) => {
       const el = document.createElementNS('http://www.w3.org/2000/svg', 'line')
@@ -301,8 +301,7 @@ export function Canvas() {
       el.setAttribute('x2', String(line.x2))
       el.setAttribute('y2', String(line.y2))
       el.setAttribute('stroke', line.type === 'row' ? rowColor : colColor)
-      el.setAttribute('stroke-opacity', line.highlighted ? '1' : '0.4')
-      el.setAttribute('stroke-width', line.highlighted ? '3' : '2')
+      el.setAttribute('stroke-width', '2')
       el.setAttribute('stroke-dasharray', '6 4')
       return el
     }
