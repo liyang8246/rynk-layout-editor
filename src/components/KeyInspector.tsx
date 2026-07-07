@@ -1,8 +1,7 @@
 import { createElementSize } from '@solid-primitives/resize-observer'
-import { createSignal, For, Match, Show, Switch } from 'solid-js'
+import { For, Match, Show, Switch } from 'solid-js'
 import {
   assignKeyOption,
-  importKleJson,
   removeKeyOption,
   selectedEncoder,
   selectedKey,
@@ -14,8 +13,6 @@ import {
   updateKeyLshape,
   updatePin,
 } from '../stores/layout'
-import { exportKleJson } from '../utils/kle-export'
-import { convertKle } from '../utils/rynk-wasm'
 
 function fmt(v: number): string {
   const s = v.toFixed(3)
@@ -48,90 +45,23 @@ function NumInput(props: {
   )
 }
 
-function downloadFile(content: string, filename: string, mimeType: string): void {
-  const blob = new Blob([content], { type: mimeType })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  a.click()
-  URL.revokeObjectURL(url)
-}
-
 export function KeyInspector() {
-  const [isExportingRynk, setIsExportingRynk] = createSignal(false)
-  let fileInputRef: HTMLInputElement | undefined
   let containerRef: HTMLDivElement | undefined
   const size = createElementSize(() => containerRef)
   const height = () => size.height ?? 0
 
-  async function handleImportKle(e: Event) {
-    const input = e.currentTarget as HTMLInputElement
-    const file = input.files?.[0]
-    if (!file) return
-    const text = await file.text()
-    importKleJson(text)
-    input.value = ''
-  }
-
-  function handleExportKle() {
-    const json = exportKleJson(state)
-    downloadFile(json, 'layout.json', 'application/json')
-  }
-
-  async function handleExportRynk() {
-    setIsExportingRynk(true)
-    try {
-      const kleJson = exportKleJson(state)
-      const result = await convertKle(kleJson)
-      downloadFile(result.display_toml, 'layout.toml', 'text/plain')
-    }
-    finally {
-      setIsExportingRynk(false)
-    }
-  }
-
   return (
     <div class="mb-auto ml-auto flex w-80 flex-col gap-1 overflow-hidden rounded-xl bg-base-100 px-4 py-3 shadow-lg ring ring-base-300 transition-[height] duration-300 ease-in-out" style={{ height: `${height() + 24}px` }}>
       <div ref={containerRef}>
-        <p class="text-center text-sm font-bold text-base-content">Properties</p>
-        <Switch fallback={(
-          <div class="flex flex-col gap-2">
-            <input
-              ref={el => fileInputRef = el}
-              type="file"
-              accept=".json"
-              class="hidden"
-              onChange={handleImportKle}
-            />
-            <button
-              type="button"
-              class="flex cursor-pointer items-center justify-center gap-1 rounded-xl p-2 text-sm hover:bg-base-300"
-              onClick={() => fileInputRef?.click()}
-            >
-              <span class="icon-[lucide--upload]" />
-              <span class="w-24">Import KLE</span>
-            </button>
-            <button
-              type="button"
-              class="flex cursor-pointer items-center justify-center gap-1 rounded-xl p-2 text-sm hover:bg-base-300"
-              onClick={handleExportKle}
-            >
-              <span class="icon-[lucide--download]" />
-              <span class="w-24">Export KLE</span>
-            </button>
-            <button
-              type="button"
-              class="flex cursor-pointer items-center justify-center gap-1 rounded-xl p-2 text-sm hover:bg-base-300"
-              disabled={isExportingRynk()}
-              onClick={handleExportRynk}
-            >
-              <span class="icon-[lucide--download]" />
-              <span class="w-24">Export Rynk</span>
-            </button>
-          </div>
-        )}
-        >
+        <p class="text-sm font-bold text-base-content">
+          <Switch fallback="Properties">
+            <Match when={state.selectedIds.length > 1}>Properties</Match>
+            <Match when={selectedKey()}>Key Properties</Match>
+            <Match when={selectedEncoder()}>Encoder Properties</Match>
+            <Match when={selectedPin()}>Pin Properties</Match>
+          </Switch>
+        </p>
+        <Switch fallback={null}>
           <Match when={state.selectedIds.length > 1}>
             <p class="text-center text-xs text-base-content/50">
               {state.selectedIds.length}
@@ -213,21 +143,37 @@ export function KeyInspector() {
           </Match>
           <Match when={selectedEncoder()} keyed>
             {enc => (
-              <fieldset class="fieldset">
-                <legend class="fieldset-legend text-xs">Encoder</legend>
-                <div class="flex flex-col gap-1">
+              <>
+                <fieldset class="fieldset">
+                  <legend class="fieldset-legend text-xs">Position</legend>
+                  <div class="grid grid-cols-2 gap-1">
+                    <NumInput label="X" value={enc.x} onChange={v => updateEncoder(enc.id, { x: v })} />
+                    <NumInput label="Y" value={enc.y} onChange={v => updateEncoder(enc.id, { y: v })} />
+                  </div>
+                </fieldset>
+                <fieldset class="fieldset">
+                  <legend class="fieldset-legend text-xs">Index</legend>
                   <NumInput label="Idx" value={enc.encoderIndex} step={1} min={0} onChange={v => updateEncoder(enc.id, { encoderIndex: v })} />
-                  <NumInput label="X" value={enc.x} onChange={v => updateEncoder(enc.id, { x: v })} />
-                  <NumInput label="Y" value={enc.y} onChange={v => updateEncoder(enc.id, { y: v })} />
-                </div>
-              </fieldset>
+                </fieldset>
+              </>
             )}
           </Match>
           <Match when={selectedPin()} keyed>
             {pin => (
-              <fieldset class="fieldset">
-                <legend class="fieldset-legend text-xs">Pin</legend>
-                <div class="flex flex-col gap-1">
+              <>
+                <fieldset class="fieldset">
+                  <legend class="fieldset-legend text-xs">Position</legend>
+                  <div class="grid grid-cols-2 gap-1">
+                    <NumInput label="X" value={pin.x} onChange={v => updatePin(pin.id, { x: v })} />
+                    <NumInput label="Y" value={pin.y} onChange={v => updatePin(pin.id, { y: v })} />
+                  </div>
+                </fieldset>
+                <fieldset class="fieldset">
+                  <legend class="fieldset-legend text-xs">Index</legend>
+                  <NumInput label="Idx" value={pin.index} step={1} min={0} onChange={v => updatePin(pin.id, { index: v })} />
+                </fieldset>
+                <fieldset class="fieldset">
+                  <legend class="fieldset-legend text-xs">Type</legend>
                   <select
                     class="select select-sm"
                     value={pin.direction}
@@ -236,11 +182,8 @@ export function KeyInspector() {
                     <option value="row">Row</option>
                     <option value="col">Col</option>
                   </select>
-                  <NumInput label="Idx" value={pin.index} step={1} min={0} onChange={v => updatePin(pin.id, { index: v })} />
-                  <NumInput label="X" value={pin.x} onChange={v => updatePin(pin.id, { x: v })} />
-                  <NumInput label="Y" value={pin.y} onChange={v => updatePin(pin.id, { y: v })} />
-                </div>
-              </fieldset>
+                </fieldset>
+              </>
             )}
           </Match>
         </Switch>
