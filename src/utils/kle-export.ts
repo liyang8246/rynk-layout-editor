@@ -8,7 +8,7 @@
  * key format and let it handle serialization.
  */
 
-import type { LayoutState, KLEKey } from '../types'
+import type { KLEKey, LayoutState } from '../types'
 import { serializeCompact } from '@liyang8246/kle-serial'
 import { round4 } from './math'
 
@@ -140,4 +140,3 @@ export function exportKleJson(state: LayoutState): string {
   const serialized = serializeCompact({ meta: {} as any, keys: kleKeys as any })
   return JSON.stringify(serialized, null, 2)
 }
-
