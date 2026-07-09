@@ -1,6 +1,7 @@
 import type { EncoderData, KeyData, LShape, OptionGroup } from '../stores/layout'
 import { parse as kleParse } from '@liyang8246/kle-serial'
 import { nanoid } from 'nanoid'
+import { round4 } from './math'
 
 export interface KleImportResult {
   keys: KeyData[]
@@ -12,11 +13,6 @@ export interface KleImportResult {
 }
 
 const EPS = 0.01
-
-/** Round to 4 decimal places (matches kle-serial's roundTo4 convention) */
-function round4(v: number): number {
-  return Math.round(v * 1e4) / 1e4
-}
 
 /**
  * Determine if a KLE key has a genuine L-shape (secondary rect differs from primary).

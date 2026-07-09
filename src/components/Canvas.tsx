@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createSignal, For, Show } from 'solid-js'
+import { createMemo, createSignal, For, onMount, Show } from 'solid-js'
 import { Portal } from 'solid-js/web'
 import {
   deselectAll,
@@ -47,8 +47,26 @@ export function Canvas() {
   const [rubberBand, setRubberBand] = createSignal<RubberBandState | null>(null)
   const [canvasDrag, setCanvasDrag] = createSignal<CanvasDragState | null>(null)
   let canvasRef!: HTMLDivElement
-  let svgBgRef!: SVGSVGElement
-  let svgFgRef!: SVGSVGElement
+
+  // ── Resolve daisyUI colors once on mount ────────────────────────────────────
+  const [rowColor, setRowColor] = createSignal('')
+  const [colColor, setColColor] = createSignal('')
+
+  onMount(() => {
+    const resolveColor = (cls: string): string => {
+      const tmp = document.createElement('div')
+      tmp.className = cls
+      tmp.style.position = 'absolute'
+      tmp.style.visibility = 'hidden'
+      tmp.style.pointerEvents = 'none'
+      canvasRef.appendChild(tmp)
+      const color = getComputedStyle(tmp).backgroundColor
+      canvasRef.removeChild(tmp)
+      return color
+    }
+    setRowColor(resolveColor('bg-sky-300'))
+    setColColor(resolveColor('bg-rose-300'))
+  })
 
   const getCanvasPos = (e: MouseEvent) => {
     const rect = canvasRef.getBoundingClientRect()
@@ -270,63 +288,10 @@ export function Canvas() {
     return lines
   })
 
-  // ── SVG wiring overlay — imperative DOM update via createEffect ────────────
-  // Using createEffect + direct SVG DOM manipulation avoids SolidJS <For>-in-SVG
-  // namespace issues and ensures lines update reactively.
+  // ── SVG wiring overlay — declarative <For> rendering ───────────────────────
 
-  createEffect(() => {
-    const svgBg = svgBgRef
-    const svgFg = svgFgRef
-    const canvas = canvasRef
-    if (!svgBg || !svgFg || !canvas) return
-
-    const lines = wiringLines()
-
-    if (lines.length === 0) {
-      while (svgBg.firstChild) svgBg.removeChild(svgBg.firstChild)
-      while (svgFg.firstChild) svgFg.removeChild(svgFg.firstChild)
-      return
-    }
-
-    // Resolve daisyUI semantic colors to computed rgb values via a temp HTML element
-    const resolveColor = (cls: string): string => {
-      const tmp = document.createElement('div')
-      tmp.className = cls
-      tmp.style.position = 'absolute'
-      tmp.style.visibility = 'hidden'
-      tmp.style.pointerEvents = 'none'
-      canvas.appendChild(tmp)
-      const color = getComputedStyle(tmp).backgroundColor
-      canvas.removeChild(tmp)
-      return color
-    }
-    const rowColor = resolveColor('bg-sky-300')
-    const colColor = resolveColor('bg-rose-300')
-
-    const makeLineEl = (line: WireLine) => {
-      const el = document.createElementNS('http://www.w3.org/2000/svg', 'line')
-      el.setAttribute('x1', String(line.x1))
-      el.setAttribute('y1', String(line.y1))
-      el.setAttribute('x2', String(line.x2))
-      el.setAttribute('y2', String(line.y2))
-      el.setAttribute('stroke', line.type === 'row' ? rowColor : colColor)
-      el.setAttribute('stroke-width', '2')
-      el.setAttribute('stroke-dasharray', '6 4')
-      return el
-    }
-
-    // bg SVG: non-highlighted lines (behind keys)
-    while (svgBg.firstChild) svgBg.removeChild(svgBg.firstChild)
-    for (const line of lines) {
-      if (!line.highlighted) svgBg.appendChild(makeLineEl(line))
-    }
-
-    // fg SVG: highlighted lines (on top of keys)
-    while (svgFg.firstChild) svgFg.removeChild(svgFg.firstChild)
-    for (const line of lines) {
-      if (line.highlighted) svgFg.appendChild(makeLineEl(line))
-    }
-  })
+  const bgLines = createMemo(() => wiringLines().filter(l => !l.highlighted))
+  const fgLines = createMemo(() => wiringLines().filter(l => l.highlighted))
 
   return (
     <div
@@ -339,10 +304,23 @@ export function Canvas() {
     >
       {/* Wiring lines SVG — background (non-highlighted, behind keys) */}
       <svg
-        ref={svgBgRef}
         class="pointer-events-none absolute inset-0"
         style={{ width: '100%', height: '100%' }}
-      />
+      >
+        <For each={bgLines()}>
+          {line => (
+            <line
+              x1={line.x1}
+              y1={line.y1}
+              x2={line.x2}
+              y2={line.y2}
+              stroke={line.type === 'row' ? rowColor() : colColor()}
+              stroke-width="2"
+              stroke-dasharray="6 4"
+            />
+          )}
+        </For>
+      </svg>
 
       {/* Keys */}
       <For each={state.keys.filter(isKeyVisible)}>
@@ -379,10 +357,23 @@ export function Canvas() {
 
       {/* Wiring lines SVG — foreground (highlighted, on top of keys) */}
       <svg
-        ref={svgFgRef}
         class="pointer-events-none absolute inset-0"
         style={{ width: '100%', height: '100%' }}
-      />
+      >
+        <For each={fgLines()}>
+          {line => (
+            <line
+              x1={line.x1}
+              y1={line.y1}
+              x2={line.x2}
+              y2={line.y2}
+              stroke={line.type === 'row' ? rowColor() : colColor()}
+              stroke-width="2"
+              stroke-dasharray="6 4"
+            />
+          )}
+        </For>
+      </svg>
 
       {/* Rubber-band selection rectangle — rendered via Portal to escape grid cell clipping */}
       <Portal mount={document.body}>

@@ -1,7 +1,9 @@
+import { createShortcut } from '@solid-primitives/keyboard'
 import { nanoid } from 'nanoid'
-import { createSignal, onCleanup } from 'solid-js'
-import { createStore, produce } from 'solid-js/store'
+import { createSignal } from 'solid-js'
+import { createStore, produce, reconcile, unwrap } from 'solid-js/store'
 import { parseKleJson } from '../utils/kle-import'
+import { snap } from '../utils/math'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -105,7 +107,10 @@ export { setState, state }
 // ── Undo/Redo history ──────────────────────────────────────────────────────────
 
 const MAX_HISTORY = 50
-let historySnapshots: string[] = []
+
+type HistorySnapshot = LayoutState
+
+let historySnapshots: HistorySnapshot[] = []
 let historyIndex = -1
 
 const [canUndo, setCanUndo] = createSignal(false)
@@ -118,17 +123,7 @@ function updateUndoRedoSignals(): void {
 
 /** Snapshot current state (excluding selectedIds) and push to history */
 export function pushHistory(): void {
-  const snapshot = JSON.stringify({
-    keys: state.keys,
-    encoders: state.encoders,
-    pins: state.pins,
-    matrixRows: state.matrixRows,
-    matrixCols: state.matrixCols,
-    optionGroups: state.optionGroups,
-    activeChoices: state.activeChoices,
-  })
-  // Skip if identical to current snapshot (no-op)
-  if (historyIndex >= 0 && historySnapshots[historyIndex] === snapshot) return
+  const snapshot: HistorySnapshot = structuredClone({ ...unwrap(state), selectedIds: [] })
 
   // Truncate any redo states beyond current index
   historySnapshots = historySnapshots.slice(0, historyIndex + 1)
@@ -142,7 +137,7 @@ export function pushHistory(): void {
 /**
  * Wrap an action function so it pushes history before executing.
  *  If the wrapped function returns early (guard clause) without mutating state,
- *  pushHistory's dedup check silently discards the duplicate snapshot.
+ *  the extra history point is harmless — undoing it restores the same state.
  */
 function withHistory<T extends (...args: any[]) => any>(fn: T): T {
   return ((...args: any[]) => {
@@ -155,17 +150,9 @@ function withHistory<T extends (...args: any[]) => any>(fn: T): T {
 export function undo(): void {
   if (historyIndex <= 0) return
   historyIndex--
-  const snapshot = JSON.parse(historySnapshots[historyIndex])
-  setState({
-    keys: snapshot.keys,
-    encoders: snapshot.encoders,
-    pins: snapshot.pins,
-    matrixRows: snapshot.matrixRows,
-    matrixCols: snapshot.matrixCols,
-    optionGroups: snapshot.optionGroups ?? [],
-    activeChoices: snapshot.activeChoices ?? {},
-    selectedIds: [],
-  })
+  const snapshot = historySnapshots[historyIndex]
+  setState(reconcile(snapshot))
+  setState('selectedIds', [])
   updateUndoRedoSignals()
 }
 
@@ -173,17 +160,9 @@ export function undo(): void {
 export function redo(): void {
   if (historyIndex >= historySnapshots.length - 1) return
   historyIndex++
-  const snapshot = JSON.parse(historySnapshots[historyIndex])
-  setState({
-    keys: snapshot.keys,
-    encoders: snapshot.encoders,
-    pins: snapshot.pins,
-    matrixRows: snapshot.matrixRows,
-    matrixCols: snapshot.matrixCols,
-    optionGroups: snapshot.optionGroups ?? [],
-    activeChoices: snapshot.activeChoices ?? {},
-    selectedIds: [],
-  })
+  const snapshot = historySnapshots[historyIndex]
+  setState(reconcile(snapshot))
+  setState('selectedIds', [])
   updateUndoRedoSignals()
 }
 
@@ -663,10 +642,6 @@ export const renameOptionGroup = withHistory((groupId: number, name: string): vo
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-function snap(value: number): number {
-  return Math.round(value * 4) / 4 // snap to 0.25
-}
-
 /** Look up a canvas item by id across all entity arrays */
 export function getItem(id: string): CanvasItem | undefined {
   const key = state.keys.find(k => k.id === id)
@@ -726,91 +701,91 @@ export function updateItemPosition(id: string, x: number, y: number): void {
 
 // ── Keyboard shortcut hook ─────────────────────────────────────────────────────
 
+/** Check if a keyboard event originated from an input-like element */
+function isInputTarget(e: KeyboardEvent | null): boolean {
+  if (!e) return false
+  const el = e.target as HTMLElement
+  return el?.matches?.('input, textarea, select, [contenteditable]') ?? false
+}
+
 export function useKeyboardShortcuts(): void {
-  // Called once in App.tsx onMount — onCleanup removes the listener
   if (typeof window === 'undefined') return
 
-  const handler = (e: KeyboardEvent) => {
-    // Don't intercept when typing in an input
-    if ((e.target as HTMLElement)?.tagName === 'INPUT') return
+  // Undo: Ctrl+Z
+  createShortcut(['Control', 'z'], (e) => {
+    if (isInputTarget(e)) return
+    e?.preventDefault()
+    undo()
+  }, { preventDefault: false })
 
-    const mod = e.ctrlKey || e.metaKey
+  // Redo: Ctrl+Shift+Z
+  createShortcut(['Control', 'Shift', 'z'], (e) => {
+    if (isInputTarget(e)) return
+    e?.preventDefault()
+    redo()
+  }, { preventDefault: false })
 
-    // Undo/Redo/Copy/Paste shortcuts
-    if (mod && e.key === 'z' && !e.shiftKey) {
-      e.preventDefault()
-      undo()
-      return
-    }
-    if (mod && e.key === 'z' && e.shiftKey) {
-      e.preventDefault()
-      redo()
-      return
-    }
-    if (mod && e.key === 'y') {
-      e.preventDefault()
-      redo()
-      return
-    }
-    if (mod && e.key === 'c') {
-      e.preventDefault()
-      copySelected()
-      return
-    }
-    if (mod && e.key === 'v') {
-      e.preventDefault()
-      pasteClipboard()
-      return
-    }
-    if (mod && e.key === 'a') {
-      e.preventDefault()
-      const allIds = [...state.keys.map(k => k.id), ...state.encoders.map(e => e.id), ...state.pins.map(p => p.id)]
-      setState('selectedIds', allIds)
-      return
-    }
+  // Redo: Ctrl+Y
+  createShortcut(['Control', 'y'], (e) => {
+    if (isInputTarget(e)) return
+    e?.preventDefault()
+    redo()
+  }, { preventDefault: false })
 
-    const step = e.shiftKey ? STEP_COARSE : STEP_FINE
+  // Copy: Ctrl+C
+  createShortcut(['Control', 'c'], (e) => {
+    if (isInputTarget(e)) return
+    e?.preventDefault()
+    copySelected()
+  }, { preventDefault: false })
 
-    switch (e.key) {
-      case 'ArrowLeft':
-        if (hasSelection()) {
-          e.preventDefault()
-          moveSelected(-step, 0)
-        }
-        break
-      case 'ArrowRight':
-        if (hasSelection()) {
-          e.preventDefault()
-          moveSelected(step, 0)
-        }
-        break
-      case 'ArrowUp':
-        if (hasSelection()) {
-          e.preventDefault()
-          moveSelected(0, -step)
-        }
-        break
-      case 'ArrowDown':
-        if (hasSelection()) {
-          e.preventDefault()
-          moveSelected(0, step)
-        }
-        break
-      case 'Delete':
-      case 'Backspace':
-        if (hasSelection()) {
-          e.preventDefault()
-          deleteSelected()
-        }
-        break
-      case 'Escape':
-        deselectAll()
-        break
-    }
+  // Paste: Ctrl+V
+  createShortcut(['Control', 'v'], (e) => {
+    if (isInputTarget(e)) return
+    e?.preventDefault()
+    pasteClipboard()
+  }, { preventDefault: false })
+
+  // Select All: Ctrl+A
+  createShortcut(['Control', 'a'], (e) => {
+    if (isInputTarget(e)) return
+    e?.preventDefault()
+    const allIds = [...state.keys.map(k => k.id), ...state.encoders.map(e => e.id), ...state.pins.map(p => p.id)]
+    setState('selectedIds', allIds)
+  }, { preventDefault: false })
+
+  // Arrow keys (step depends on Shift) — no requireReset, holding is intentional
+  const arrowHandler = (dx: number, dy: number) => (e: KeyboardEvent | null) => {
+    if (isInputTarget(e)) return
+    if (!hasSelection()) return
+    e?.preventDefault()
+    const step = e?.shiftKey ? STEP_COARSE : STEP_FINE
+    moveSelected(dx * step, dy * step)
   }
 
-  window.addEventListener('keydown', handler)
-  onCleanup(() => window.removeEventListener('keydown', handler))
+  createShortcut(['ArrowLeft'], arrowHandler(-1, 0), { preventDefault: false })
+  createShortcut(['ArrowRight'], arrowHandler(1, 0), { preventDefault: false })
+  createShortcut(['ArrowUp'], arrowHandler(0, -1), { preventDefault: false })
+  createShortcut(['ArrowDown'], arrowHandler(0, 1), { preventDefault: false })
+
+  // Delete / Backspace
+  createShortcut(['Delete'], (e) => {
+    if (isInputTarget(e)) return
+    e?.preventDefault()
+    if (hasSelection()) deleteSelected()
+  }, { preventDefault: false })
+
+  createShortcut(['Backspace'], (e) => {
+    if (isInputTarget(e)) return
+    e?.preventDefault()
+    if (hasSelection()) deleteSelected()
+  }, { preventDefault: false })
+
+  // Escape
+  createShortcut(['Escape'], (e) => {
+    if (isInputTarget(e)) return
+    deselectAll()
+  }, { preventDefault: false })
 }
 
 // ── Pixel ↔ key unit conversion ────────────────────────────────────────────────

@@ -10,12 +10,7 @@
 
 import type { LayoutState } from '../stores/layout'
 import { serializeCompact } from '@liyang8246/kle-serial'
-
-// ── Helpers ────────────────────────────────────────────────────────────────────
-
-function round4(v: number): number {
-  return Math.round(v * 1e4) / 1e4
-}
+import { round4 } from './math'
 
 // ── Export ─────────────────────────────────────────────────────────────────────
 
