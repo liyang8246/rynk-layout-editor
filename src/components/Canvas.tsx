@@ -1,3 +1,4 @@
+import { createWindowSize } from '@solid-primitives/resize-observer'
 import { createMemo, createSignal, For, onMount, Show } from 'solid-js'
 import {
   deselectAll,
@@ -16,7 +17,6 @@ import {
 import { EncoderKnob } from './EncoderKnob'
 import { KeyCap } from './KeyCap'
 import { PinNode } from './PinNode'
-import { createWindowSize } from '@solid-primitives/resize-observer'
 
 /** Drag state for rubber-band selection */
 interface RubberBandState {
@@ -294,8 +294,7 @@ export function Canvas(props: CanvasProps) {
   })
 
   // ── Inner content size: fill viewport beyond origin, or expand for large layouts ──
-  const windowSize = createWindowSize();
-  
+  const windowSize = createWindowSize()
   const contentSize = createMemo(() => {
     const origin = props.origin()
     return {
@@ -327,9 +326,9 @@ export function Canvas(props: CanvasProps) {
         ref={innerRef}
         class="relative"
         style={{
-          'transform': `translate(${props.origin().x}px, ${props.origin().y}px)`,
-          'width': `${contentSize().width}px`,
-          'height': `${contentSize().height}px`,
+          transform: `translate(${props.origin().x}px, ${props.origin().y}px)`,
+          width: `${contentSize().width}px`,
+          height: `${contentSize().height}px`,
         }}
       >
         {/* Wiring lines SVG — background (non-highlighted, behind keys) */}
