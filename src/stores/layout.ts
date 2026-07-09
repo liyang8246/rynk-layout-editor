@@ -140,16 +140,11 @@ export { isDragging }
 
 /** Start dragging all currently selected items. Call on pointerdown on a selected item. */
 export const startItemDrag = withHistory((): void => {
-  const origins = new Map<string, { x: number, y: number, rx?: number, ry?: number }>()
+  const origins = new Map<string, { x: number, y: number }>()
   for (const id of state.selectedIds) {
     const item = getItem(id)
     if (item) {
-      const entry: { x: number, y: number, rx?: number, ry?: number } = { x: item.data.x, y: item.data.y }
-      if (item.type === 'key') {
-        entry.rx = (item.data as KeyData).rx
-        entry.ry = (item.data as KeyData).ry
-      }
-      origins.set(id, entry)
+      origins.set(id, { x: item.data.x, y: item.data.y })
     }
   }
 
@@ -167,18 +162,7 @@ export function updateItemDrag(dx: number, dy: number): void {
     if (!o) continue
     const newX = Math.max(0, o.x + dx)
     const newY = Math.max(0, o.y + dy)
-    // Compute actual delta (may differ from dx/dy due to clamping)
-    const actualDx = newX - o.x
-    const actualDy = newY - o.y
     updateItemPosition(id, newX, newY)
-    // Move rx/ry by the same actual delta to keep rotation origin in sync
-    if (o.rx !== undefined && o.ry !== undefined) {
-      const keyIdx = state.keys.findIndex(k => k.id === id)
-      if (keyIdx !== -1) {
-        setState('keys', keyIdx, 'rx', o.rx + actualDx)
-        setState('keys', keyIdx, 'ry', o.ry + actualDy)
-      }
-    }
   }
 
   d.lastDx = dx
@@ -193,13 +177,6 @@ export function endItemDrag(): void {
     const item = getItem(id)
     if (item) {
       updateItemPosition(id, snap(item.data.x), snap(item.data.y))
-      if (item.type === 'key') {
-        const keyIdx = state.keys.findIndex(k => k.id === id)
-        if (keyIdx !== -1) {
-          setState('keys', keyIdx, 'rx', snap(state.keys[keyIdx].rx))
-          setState('keys', keyIdx, 'ry', snap(state.keys[keyIdx].ry))
-        }
-      }
     }
   }
 
