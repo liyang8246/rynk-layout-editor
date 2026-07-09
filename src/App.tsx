@@ -15,8 +15,10 @@ function App() {
       <div class="flex grid-canvas p-4 ring ring-base-300">
         <div class="mt-auto ml-auto flex h-12 w-80 items-center justify-between rounded-xl bg-base-100 px-4 py-3 shadow-lg ring ring-base-300">
           <h1 class="flex gap-1.5 text-base-content">
-            <img src="/logo.svg" alt="logo" class="h-6" />
-            <span class="font-bold">Layout Editor</span>
+            <a href="https://rmk.rs" target="_blank">
+              <img src="/logo.svg" alt="logo" class="h-6" />
+            </a>
+            <span class="cursor-default font-bold">Layout Editor</span>
           </h1>
           <a href="https://github.com/liyang8246/rynk-layout-editor" class="icon-[lucide--github] text-xl text-base-content/50" target="_blank" />
         </div>
