@@ -362,6 +362,20 @@ export function Canvas(props: CanvasProps) {
           )}
         </For>
 
+        {/* Rotation origin indicators for selected keys with rotation */}
+        <For each={state.keys.filter(k => state.selectedIds.includes(k.id) && (k.r !== 0 || k.rx !== 0 || k.ry !== 0))}>
+          {key => (
+            <span
+              class="pointer-events-none absolute icon-[lucide--x] size-6 text-2xl text-primary/75"
+              style={{
+                left: `${key.rx * KEY_UNIT}px`,
+                top: `${key.ry * KEY_UNIT}px`,
+                transform: 'translate(-50%, -50%)',
+              }}
+            />
+          )}
+        </For>
+
         {/* Encoders */}
         <For each={state.encoders}>
           {encoder => (
