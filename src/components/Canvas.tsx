@@ -50,6 +50,7 @@ export function Canvas(props: CanvasProps) {
   const [rubberBand, setRubberBand] = createSignal<RubberBandState | null>(null)
   const [canvasDrag, setCanvasDrag] = createSignal<CanvasDragState | null>(null)
   let canvasRef!: HTMLDivElement
+  let innerRef!: HTMLDivElement
 
   // ── Resolve daisyUI colors once on mount ────────────────────────────────────
   const [rowColor, setRowColor] = createSignal('')
@@ -84,7 +85,10 @@ export function Canvas(props: CanvasProps) {
 
   const handleCanvasMouseDown = (e: MouseEvent) => {
     if (e.button !== 0) return
-    if (e.target !== e.currentTarget) return
+    // Only start rubber-band when clicking the canvas background (outer or inner div),
+    // not when clicking on keys/encoders/pins (which stopPropagation)
+    const target = e.target as HTMLElement
+    if (target !== canvasRef && target !== innerRef) return
 
     const pos = getCanvasPos(e)
     const rbState: RubberBandState = {
@@ -303,6 +307,7 @@ export function Canvas(props: CanvasProps) {
       onMouseDown={handleCanvasMouseDown}
     >
       <div
+        ref={innerRef}
         class="relative"
         style={{
           'transform': `translate(${props.origin().x}px, ${props.origin().y}px)`,
