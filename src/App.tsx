@@ -41,7 +41,7 @@ function App() {
           <KeyInspector />
         </div>
         {/* bottom-right — empty, Canvas shows through */}
-        <div class='ring ring-base-300'/>
+        <div class="ring ring-base-300" />
       </div>
     </div>
   )

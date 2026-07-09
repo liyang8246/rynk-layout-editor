@@ -300,12 +300,17 @@ export function Canvas(props: CanvasProps) {
   return (
     <div
       ref={canvasRef}
-      class="relative size-full overflow-auto grid-canvas select-none"
+      class="relative size-full overflow-auto select-none"
       classList={{
         'cursor-grabbing': isDragging(),
       }}
       onMouseDown={handleCanvasMouseDown}
     >
+      {/* Full-viewport grid background, offset to align with canvas origin */}
+      <div
+        class="pointer-events-none absolute inset-0 grid-canvas"
+        style={{ 'background-position': `${props.origin().x}px ${props.origin().y}px` }}
+      />
       <div
         ref={innerRef}
         class="relative"
