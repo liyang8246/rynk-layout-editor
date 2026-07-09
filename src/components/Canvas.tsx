@@ -1,5 +1,4 @@
 import { createMemo, createSignal, For, onMount, Show } from 'solid-js'
-import { Portal } from 'solid-js/web'
 import {
   deselectAll,
   endItemDrag,
@@ -43,7 +42,11 @@ interface WireLine {
   highlighted: boolean
 }
 
-export function Canvas() {
+interface CanvasProps {
+  origin: () => { x: number, y: number }
+}
+
+export function Canvas(props: CanvasProps) {
   const [rubberBand, setRubberBand] = createSignal<RubberBandState | null>(null)
   const [canvasDrag, setCanvasDrag] = createSignal<CanvasDragState | null>(null)
   let canvasRef!: HTMLDivElement
@@ -70,9 +73,10 @@ export function Canvas() {
 
   const getCanvasPos = (e: MouseEvent) => {
     const rect = canvasRef.getBoundingClientRect()
+    const o = props.origin()
     return {
-      x: e.clientX - rect.left + canvasRef.scrollLeft,
-      y: e.clientY - rect.top + canvasRef.scrollTop,
+      x: e.clientX - rect.left + canvasRef.scrollLeft - o.x,
+      y: e.clientY - rect.top + canvasRef.scrollTop - o.y,
     }
   }
 
@@ -159,12 +163,8 @@ export function Canvas() {
   const rubberBandRect = () => {
     const rb = rubberBand()
     if (!rb) return null
-    // Canvas internal coords → viewport coords for Portal rendering
-    const rect = canvasRef.getBoundingClientRect()
-    const offsetX = rect.left - canvasRef.scrollLeft
-    const offsetY = rect.top - canvasRef.scrollTop
-    const left = Math.min(rb.startX, rb.currentX) + offsetX
-    const top = Math.min(rb.startY, rb.currentY) + offsetY
+    const left = Math.min(rb.startX, rb.currentX)
+    const top = Math.min(rb.startY, rb.currentY)
     const width = Math.abs(rb.currentX - rb.startX)
     const height = Math.abs(rb.currentY - rb.startY)
     if (width < 3 && height < 3) return null
@@ -296,91 +296,99 @@ export function Canvas() {
   return (
     <div
       ref={canvasRef}
-      class="relative size-full select-none"
+      class="relative size-full overflow-auto grid-canvas select-none"
       classList={{
         'cursor-grabbing': isDragging(),
       }}
       onMouseDown={handleCanvasMouseDown}
     >
-      {/* Wiring lines SVG — background (non-highlighted, behind keys) */}
-      <svg
-        class="pointer-events-none absolute inset-0"
-        style={{ width: '100%', height: '100%' }}
+      <div
+        class="relative"
+        style={{
+          'transform': `translate(${props.origin().x}px, ${props.origin().y}px)`,
+          // TODO: compute from item bounding box for edge-case layouts
+          'min-width': '2000px',
+          'min-height': '1500px',
+        }}
       >
-        <For each={bgLines()}>
-          {line => (
-            <line
-              x1={line.x1}
-              y1={line.y1}
-              x2={line.x2}
-              y2={line.y2}
-              stroke={line.type === 'row' ? rowColor() : colColor()}
-              stroke-width="2"
-              stroke-dasharray="6 4"
+        {/* Wiring lines SVG — background (non-highlighted, behind keys) */}
+        <svg
+          class="pointer-events-none absolute inset-0"
+          style={{ width: '100%', height: '100%' }}
+        >
+          <For each={bgLines()}>
+            {line => (
+              <line
+                x1={line.x1}
+                y1={line.y1}
+                x2={line.x2}
+                y2={line.y2}
+                stroke={line.type === 'row' ? rowColor() : colColor()}
+                stroke-width="2"
+                stroke-dasharray="6 4"
+              />
+            )}
+          </For>
+        </svg>
+
+        {/* Keys */}
+        <For each={state.keys.filter(isKeyVisible)}>
+          {key => (
+            <KeyCap
+              key={key}
+              selected={state.selectedIds.includes(key.id)}
+              onDragStart={handleDragStart}
             />
           )}
         </For>
-      </svg>
 
-      {/* Keys */}
-      <For each={state.keys.filter(isKeyVisible)}>
-        {key => (
-          <KeyCap
-            key={key}
-            selected={state.selectedIds.includes(key.id)}
-            onDragStart={handleDragStart}
-          />
-        )}
-      </For>
-
-      {/* Encoders */}
-      <For each={state.encoders}>
-        {encoder => (
-          <EncoderKnob
-            encoder={encoder}
-            selected={state.selectedIds.includes(encoder.id)}
-            onDragStart={handleDragStart}
-          />
-        )}
-      </For>
-
-      {/* Pins */}
-      <For each={state.pins}>
-        {pin => (
-          <PinNode
-            pin={pin}
-            selected={state.selectedIds.includes(pin.id)}
-            onDragStart={handleDragStart}
-          />
-        )}
-      </For>
-
-      {/* Wiring lines SVG — foreground (highlighted, on top of keys) */}
-      <svg
-        class="pointer-events-none absolute inset-0"
-        style={{ width: '100%', height: '100%' }}
-      >
-        <For each={fgLines()}>
-          {line => (
-            <line
-              x1={line.x1}
-              y1={line.y1}
-              x2={line.x2}
-              y2={line.y2}
-              stroke={line.type === 'row' ? rowColor() : colColor()}
-              stroke-width="2"
-              stroke-dasharray="6 4"
+        {/* Encoders */}
+        <For each={state.encoders}>
+          {encoder => (
+            <EncoderKnob
+              encoder={encoder}
+              selected={state.selectedIds.includes(encoder.id)}
+              onDragStart={handleDragStart}
             />
           )}
         </For>
-      </svg>
 
-      {/* Rubber-band selection rectangle — rendered via Portal to escape grid cell clipping */}
-      <Portal mount={document.body}>
+        {/* Pins */}
+        <For each={state.pins}>
+          {pin => (
+            <PinNode
+              pin={pin}
+              selected={state.selectedIds.includes(pin.id)}
+              onDragStart={handleDragStart}
+            />
+          )}
+        </For>
+
+        {/* Wiring lines SVG — foreground (highlighted, on top of keys) */}
+        <svg
+          class="pointer-events-none absolute inset-0"
+          style={{ width: '100%', height: '100%' }}
+        >
+          <For each={fgLines()}>
+            {line => (
+              <line
+                x1={line.x1}
+                y1={line.y1}
+                x2={line.x2}
+                y2={line.y2}
+                stroke={line.type === 'row' ? rowColor() : colColor()}
+                stroke-width="2"
+                stroke-dasharray="6 4"
+              />
+            )}
+          </For>
+        </svg>
+
+        {/* Rubber-band selection rectangle — rendered inside canvas coordinate space */}
         <Show when={rubberBandRect()}>
           {rect => (
             <div
-              class="pointer-events-none fixed border-2 border-primary/50 bg-primary/10"
+              class="pointer-events-none absolute border-2 border-primary/50 bg-primary/10"
               style={{
                 left: `${rect().left}px`,
                 top: `${rect().top}px`,
@@ -390,7 +398,7 @@ export function Canvas() {
             />
           )}
         </Show>
-      </Portal>
+      </div>
     </div>
   )
 }
