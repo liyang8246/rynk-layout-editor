@@ -292,6 +292,45 @@ export function Canvas(props: CanvasProps) {
     return lines
   })
 
+  // ── Inner content size: fill viewport beyond origin, or expand for large layouts ──
+  const contentSize = createMemo(() => {
+    const o = props.origin()
+    // Viewport space available beyond the origin point
+    const vpW = canvasRef ? canvasRef.clientWidth - o.x : 0
+    const vpH = canvasRef ? canvasRef.clientHeight - o.y : 0
+
+    // Bounding box of all canvas items
+    let maxR = 0
+    let maxB = 0
+    for (const key of state.keys) {
+      if (!isKeyVisible(key)) continue
+      const r = key.r !== 0
+        ? Math.max(key.x + key.w, key.rx + Math.abs(key.x + key.w - key.rx))
+        : key.x + key.w
+      const b = key.r !== 0
+        ? Math.max(key.y + key.h, key.ry + Math.abs(key.y + key.h - key.ry))
+        : key.y + key.h
+      maxR = Math.max(maxR, r)
+      maxB = Math.max(maxB, b)
+    }
+    for (const enc of state.encoders) {
+      maxR = Math.max(maxR, enc.x + 1)
+      maxB = Math.max(maxB, enc.y + 1)
+    }
+    for (const pin of state.pins) {
+      maxR = Math.max(maxR, pin.x + PIN_W)
+      maxB = Math.max(maxB, pin.y + PIN_H)
+    }
+
+    const itemsW = maxR * KEY_UNIT
+    const itemsH = maxB * KEY_UNIT
+
+    return {
+      width: Math.max(vpW, itemsW),
+      height: Math.max(vpH, itemsH),
+    }
+  })
+
   // ── SVG wiring overlay — declarative <For> rendering ───────────────────────
 
   const bgLines = createMemo(() => wiringLines().filter(l => !l.highlighted))
@@ -316,9 +355,8 @@ export function Canvas(props: CanvasProps) {
         class="relative"
         style={{
           'transform': `translate(${props.origin().x}px, ${props.origin().y}px)`,
-          // TODO: compute from item bounding box for edge-case layouts
-          'min-width': '2000px',
-          'min-height': '1500px',
+          'min-width': `${contentSize().width}px`,
+          'min-height': `${contentSize().height}px`,
         }}
       >
         {/* Wiring lines SVG — background (non-highlighted, behind keys) */}
