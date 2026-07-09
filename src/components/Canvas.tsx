@@ -298,10 +298,6 @@ export function Canvas(props: CanvasProps) {
   
   const contentSize = createMemo(() => {
     const origin = props.origin()
-    console.log({
-      width: origin.x,
-      height:origin.y,
-    },windowSize.width)
     return {
       width: windowSize.width - origin.x,
       height: windowSize.height - origin.y,
