@@ -1,4 +1,4 @@
-import type { KeyData } from '../stores/layout'
+import type { KeyData } from '../types'
 import { Show } from 'solid-js'
 import { isDragging, KEY_UNIT, selectItem } from '../stores/layout'
 

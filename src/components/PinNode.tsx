@@ -1,4 +1,4 @@
-import type { PinData } from '../stores/layout'
+import type { PinData } from '../types'
 import { connectSelectedToPin, hasSelectedKeys, isDragging, KEY_UNIT, PIN_H, PIN_W, selectItem } from '../stores/layout'
 
 interface PinNodeProps {

@@ -10,11 +10,7 @@
  * - keyboard_toml_to_vial(toml_text: string) → string
  */
 
-export interface ConvertKleResult {
-  display_toml: string
-  inner_layout_toml: string
-  warnings: string[]
-}
+import type { ConvertKleResult } from '../types'
 
 let initPromise: Promise<void> | null = null
 let wasmModule: typeof import('../wasm/rynk-kle/rynk_kle') | null = null

@@ -1,4 +1,4 @@
-import type { EncoderData } from '../stores/layout'
+import type { EncoderData } from '../types'
 import { isDragging, KEY_UNIT, selectItem } from '../stores/layout'
 
 interface EncoderKnobProps {

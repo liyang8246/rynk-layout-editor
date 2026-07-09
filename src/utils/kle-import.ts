@@ -1,16 +1,7 @@
-import type { EncoderData, KeyData, LShape, OptionGroup } from '../stores/layout'
+import type { EncoderData, KeyData, KleImportResult, LShape, OptionGroup } from '../types'
 import { parse as kleParse } from '@liyang8246/kle-serial'
 import { nanoid } from 'nanoid'
 import { round4 } from './math'
-
-export interface KleImportResult {
-  keys: KeyData[]
-  encoders: EncoderData[]
-  matrixRows: number
-  matrixCols: number
-  optionGroups: OptionGroup[]
-  activeChoices: Record<number, number>
-}
 
 const EPS = 0.01
 
