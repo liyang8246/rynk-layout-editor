@@ -238,6 +238,82 @@ export function hasSelectedKeys(): boolean {
   return state.keys.some(k => ids.has(k.id))
 }
 
+/** Get all selected keys */
+export function getSelectedKeys(): KeyData[] {
+  const ids = new Set(state.selectedIds)
+  return state.keys.filter(k => ids.has(k.id))
+}
+
+/** Get all selected encoders */
+export function getSelectedEncoders(): EncoderData[] {
+  const ids = new Set(state.selectedIds)
+  return state.encoders.filter(e => ids.has(e.id))
+}
+
+/** Get all selected pins */
+export function getSelectedPins(): PinData[] {
+  const ids = new Set(state.selectedIds)
+  return state.pins.filter(p => ids.has(p.id))
+}
+
+/** What type of items are in the current selection? Returns 'key'|'encoder'|'pin'|'mixed'|null */
+export function selectionType(): 'key' | 'encoder' | 'pin' | 'mixed' | null {
+  if (state.selectedIds.length === 0) return null
+  const ids = new Set(state.selectedIds)
+  const hasKeys = state.keys.some(k => ids.has(k.id))
+  const hasEncoders = state.encoders.some(e => ids.has(e.id))
+  const hasPins = state.pins.some(p => ids.has(p.id))
+  const count = [hasKeys, hasEncoders, hasPins].filter(Boolean).length
+  if (count === 0) return null
+  if (count > 1) return 'mixed'
+  if (hasKeys) return 'key'
+  if (hasEncoders) return 'encoder'
+  return 'pin'
+}
+
+/** Update all selected keys with the same partial update */
+export const updateSelectedKeys = withHistory((updates: Partial<Omit<KeyData, 'id'>>): void => {
+  const ids = new Set(state.selectedIds)
+  setState('keys', produce((keys) => {
+    for (const key of keys) {
+      if (ids.has(key.id)) {
+        Object.assign(key, updates)
+      }
+    }
+  }))
+})
+
+/** Update all selected encoders with the same partial update */
+export const updateSelectedEncoders = withHistory((updates: Partial<Omit<EncoderData, 'id'>>): void => {
+  const ids = new Set(state.selectedIds)
+  setState('encoders', produce((encoders) => {
+    for (const enc of encoders) {
+      if (ids.has(enc.id)) {
+        Object.assign(enc, updates)
+      }
+    }
+  }))
+})
+
+/** Update all selected pins with the same partial update */
+export const updateSelectedPins = withHistory((updates: Partial<Omit<PinData, 'id'>>): void => {
+  const ids = new Set(state.selectedIds)
+  setState('pins', produce((pins) => {
+    for (const pin of pins) {
+      if (ids.has(pin.id)) {
+        Object.assign(pin, updates)
+      }
+    }
+  }))
+})
+
+/** Get the common value across an array of items, or undefined if they differ */
+export function commonValue<T>(items: T[], getter: (item: T) => any): any {
+  if (items.length === 0) return undefined
+  const first = getter(items[0])
+  return items.every(item => getter(item) === first) ? first : undefined
+}
+
 // ── Actions ────────────────────────────────────────────────────────────────────
 
 /** Add a new key at the next available position (y=0, first free x) */

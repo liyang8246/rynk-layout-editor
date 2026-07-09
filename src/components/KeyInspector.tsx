@@ -1,17 +1,26 @@
+import type { EncoderData, KeyData, PinData } from '../types'
 import { createElementSize } from '@solid-primitives/resize-observer'
 import { For, Match, Show, Switch } from 'solid-js'
 import {
   assignKeyOption,
+  commonValue,
+  getSelectedEncoders,
+  getSelectedKeys,
+  getSelectedPins,
   removeKeyOption,
   selectedEncoder,
   selectedKey,
   selectedPin,
+  selectionType,
   state,
   toggleLShape,
   updateEncoder,
   updateKey,
   updateKeyLshape,
   updatePin,
+  updateSelectedEncoders,
+  updateSelectedKeys,
+  updateSelectedPins,
 } from '../stores/layout'
 
 function fmt(v: number): string {
@@ -21,9 +30,10 @@ function fmt(v: number): string {
 
 function NumInput(props: {
   label: string
-  value: number
+  value: number | undefined
   min?: number
   step?: number
+  placeholder?: string
   onChange: (v: number) => void
 }) {
   return (
@@ -31,11 +41,14 @@ function NumInput(props: {
       <span class="label font-mono">{props.label}</span>
       <input
         type="text"
-        value={fmt(props.value)}
+        value={props.value !== undefined ? fmt(props.value) : ''}
+        placeholder={props.placeholder ?? (props.value === undefined ? '—' : undefined)}
         min={props.min}
         step={props.step}
         onChange={(e) => {
-          const v = Number.parseFloat(e.currentTarget.value)
+          const raw = e.currentTarget.value
+          if (raw === '') return
+          const v = Number.parseFloat(raw)
           if (!Number.isNaN(v))
             props.onChange(v)
         }}
@@ -55,21 +68,15 @@ export function KeyInspector() {
       <div ref={containerRef}>
         <p class="text-sm font-bold text-base-content">
           <Switch fallback="Properties">
+            <Match when={selectionType() === 'key'}>Key Properties</Match>
+            <Match when={selectionType() === 'encoder'}>Encoder Properties</Match>
+            <Match when={selectionType() === 'pin'}>Pin Properties</Match>
             <Match when={state.selectedIds.length > 1}>Properties</Match>
-            <Match when={selectedKey()}>Key Properties</Match>
-            <Match when={selectedEncoder()}>Encoder Properties</Match>
-            <Match when={selectedPin()}>Pin Properties</Match>
           </Switch>
         </p>
         <Switch fallback={null}>
-          <Match when={state.selectedIds.length > 1}>
-            <p class="text-center text-xs text-base-content/50">
-              {state.selectedIds.length}
-              {' '}
-              items selected
-            </p>
-          </Match>
-          <Match when={selectedKey()} keyed>
+          {/* Single key selection */}
+          <Match when={state.selectedIds.length === 1 && selectedKey()} keyed>
             {key => (
               <>
                 <fieldset class="fieldset">
@@ -141,7 +148,68 @@ export function KeyInspector() {
               </>
             )}
           </Match>
-          <Match when={selectedEncoder()} keyed>
+
+          {/* Multiple keys selected */}
+          <Match when={selectionType() === 'key' && state.selectedIds.length > 1}>
+            {(() => {
+              const keys = getSelectedKeys()
+              return (
+                <>
+                  <fieldset class="fieldset">
+                    <legend class="fieldset-legend text-xs">Position & Size</legend>
+                    <div class="grid grid-cols-2 gap-1">
+                      <NumInput label="X" value={commonValue(keys, (k: KeyData) => k.x)} placeholder="..." onChange={v => updateSelectedKeys({ x: v })} />
+                      <NumInput label="Y" value={commonValue(keys, (k: KeyData) => k.y)} placeholder="..." onChange={v => updateSelectedKeys({ y: v })} />
+                      <NumInput label="W" value={commonValue(keys, (k: KeyData) => k.w)} min={0.25} placeholder="..." onChange={v => updateSelectedKeys({ w: v })} />
+                      <NumInput label="H" value={commonValue(keys, (k: KeyData) => k.h)} min={0.25} placeholder="..." onChange={v => updateSelectedKeys({ h: v })} />
+                    </div>
+                  </fieldset>
+                  <fieldset class="fieldset">
+                    <legend class="fieldset-legend text-xs">Rotation</legend>
+                    <div class="grid grid-cols-3 gap-1">
+                      <NumInput label="R" value={commonValue(keys, (k: KeyData) => k.r)} step={1} placeholder="..." onChange={v => updateSelectedKeys({ r: v })} />
+                      <NumInput label="X" value={commonValue(keys, (k: KeyData) => k.rx)} placeholder="..." onChange={v => updateSelectedKeys({ rx: v })} />
+                      <NumInput label="Y" value={commonValue(keys, (k: KeyData) => k.ry)} placeholder="..." onChange={v => updateSelectedKeys({ ry: v })} />
+                    </div>
+                  </fieldset>
+                  <Show when={state.optionGroups.length > 0}>
+                    <fieldset class="fieldset">
+                      <legend class="fieldset-legend text-xs">Option</legend>
+                      <select
+                        class="select select-sm"
+                        value={commonValue(keys, (k: KeyData) => k.option?.groupId) ?? ''}
+                        onChange={(e) => {
+                          const v = e.currentTarget.value
+                          if (!v) {
+                            // Remove option from all selected keys
+                            for (const k of keys) removeKeyOption(k.id)
+                          }
+                          else {
+                            const groupId = Number(v)
+                            const firstChoiceId = state.optionGroups.find(g => g.id === groupId)!.choices[0].id
+                            for (const k of keys) assignKeyOption(k.id, groupId, firstChoiceId)
+                          }
+                        }}
+                      >
+                        <option value="">None</option>
+                        <For each={state.optionGroups}>
+                          {g => <option value={g.id}>{g.name}</option>}
+                        </For>
+                      </select>
+                    </fieldset>
+                  </Show>
+                  <p class="text-center text-xs text-base-content/50">
+                    {keys.length}
+                    {' '}
+                    keys selected
+                  </p>
+                </>
+              )
+            })()}
+          </Match>
+
+          {/* Single encoder selection */}
+          <Match when={state.selectedIds.length === 1 && selectedEncoder()} keyed>
             {enc => (
               <>
                 <fieldset class="fieldset">
@@ -158,7 +226,32 @@ export function KeyInspector() {
               </>
             )}
           </Match>
-          <Match when={selectedPin()} keyed>
+
+          {/* Multiple encoders selected */}
+          <Match when={selectionType() === 'encoder' && state.selectedIds.length > 1}>
+            {(() => {
+              const encoders = getSelectedEncoders()
+              return (
+                <>
+                  <fieldset class="fieldset">
+                    <legend class="fieldset-legend text-xs">Position</legend>
+                    <div class="grid grid-cols-2 gap-1">
+                      <NumInput label="X" value={commonValue(encoders, (e: EncoderData) => e.x)} placeholder="..." onChange={v => updateSelectedEncoders({ x: v })} />
+                      <NumInput label="Y" value={commonValue(encoders, (e: EncoderData) => e.y)} placeholder="..." onChange={v => updateSelectedEncoders({ y: v })} />
+                    </div>
+                  </fieldset>
+                  <p class="text-center text-xs text-base-content/50">
+                    {encoders.length}
+                    {' '}
+                    encoders selected
+                  </p>
+                </>
+              )
+            })()}
+          </Match>
+
+          {/* Single pin selection */}
+          <Match when={state.selectedIds.length === 1 && selectedPin()} keyed>
             {pin => (
               <>
                 <fieldset class="fieldset">
@@ -185,6 +278,38 @@ export function KeyInspector() {
                 </fieldset>
               </>
             )}
+          </Match>
+
+          {/* Multiple pins selected */}
+          <Match when={selectionType() === 'pin' && state.selectedIds.length > 1}>
+            {(() => {
+              const pins = getSelectedPins()
+              return (
+                <>
+                  <fieldset class="fieldset">
+                    <legend class="fieldset-legend text-xs">Position</legend>
+                    <div class="grid grid-cols-2 gap-1">
+                      <NumInput label="X" value={commonValue(pins, (p: PinData) => p.x)} placeholder="..." onChange={v => updateSelectedPins({ x: v })} />
+                      <NumInput label="Y" value={commonValue(pins, (p: PinData) => p.y)} placeholder="..." onChange={v => updateSelectedPins({ y: v })} />
+                    </div>
+                  </fieldset>
+                  <p class="text-center text-xs text-base-content/50">
+                    {pins.length}
+                    {' '}
+                    pins selected
+                  </p>
+                </>
+              )
+            })()}
+          </Match>
+
+          {/* Mixed selection (different types) */}
+          <Match when={selectionType() === 'mixed'}>
+            <p class="text-center text-xs text-base-content/50">
+              {state.selectedIds.length}
+              {' '}
+              items selected
+            </p>
           </Match>
         </Switch>
       </div>
