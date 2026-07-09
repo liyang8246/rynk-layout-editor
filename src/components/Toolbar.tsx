@@ -134,7 +134,11 @@ export function Toolbar() {
           onClick={() => fileInputRef?.click()}
         >
           <span class="icon-[lucide--file-input]" />
-          <span>Import</span>
+          <div class="flex gap-0.5">
+            <span> Vial </span>
+            <span> / </span>
+            <span> Kle </span>
+          </div>
         </button>
         <input ref={fileInputRef} type="file" accept=".json" class="hidden" onChange={handleFileImport} />
         <button
