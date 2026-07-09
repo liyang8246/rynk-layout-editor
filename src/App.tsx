@@ -21,8 +21,8 @@ function App() {
       <Canvas origin={origin} />
       <div class="pointer-events-none absolute inset-0 grid grid-cols-[352px_1fr] grid-rows-[6rem_1fr] 2xl:grid-cols-[2fr_5fr]">
         {/* Logo pill — top-left */}
-        <div ref={topLeftRef} class="pointer-events-auto flex p-4">
-          <div class="mt-auto ml-auto flex h-12 w-80 items-center justify-between rounded-xl bg-base-100 px-4 py-3 shadow-lg ring ring-base-300">
+        <div ref={topLeftRef} class="flex p-4">
+          <div class="pointer-events-auto mt-auto ml-auto flex h-12 w-80 items-center justify-between rounded-xl bg-base-100 px-4 py-3 shadow-lg ring ring-base-300">
             <h1 class="flex gap-1.5 text-base-content">
               <a href="https://rmk.rs" target="_blank">
                 <img src="/logo.svg" alt="logo" class="h-6" />
@@ -33,11 +33,11 @@ function App() {
           </div>
         </div>
         {/* Toolbar — top-right */}
-        <div class="pointer-events-auto flex p-4">
+        <div class="flex p-4">
           <Toolbar />
         </div>
         {/* Properties panel — bottom-left */}
-        <div class="pointer-events-auto p-4">
+        <div class="p-4">
           <KeyInspector />
         </div>
         {/* bottom-right — empty, Canvas shows through */}

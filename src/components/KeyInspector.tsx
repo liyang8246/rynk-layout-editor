@@ -51,7 +51,7 @@ export function KeyInspector() {
   const height = () => size.height ?? 0
 
   return (
-    <div class="mb-auto ml-auto flex w-80 flex-col gap-1 overflow-hidden rounded-xl bg-base-100 px-4 py-3 shadow-lg ring ring-base-300 transition-[height] duration-300 ease-in-out" style={{ height: `${height() + 24}px` }}>
+    <div class="pointer-events-auto mb-auto ml-auto flex w-80 flex-col gap-1 overflow-hidden rounded-xl bg-base-100 px-4 py-3 shadow-lg ring ring-base-300 transition-[height] duration-300 ease-in-out" style={{ height: `${height() + 24}px` }}>
       <div ref={containerRef}>
         <p class="text-sm font-bold text-base-content">
           <Switch fallback="Properties">
