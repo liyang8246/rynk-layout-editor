@@ -33,11 +33,11 @@ function App() {
           </div>
         </div>
         {/* Toolbar — top-right */}
-        <div class="flex p-4 ring ring-base-300">
+        <div class="flex p-4">
           <Toolbar />
         </div>
         {/* Properties panel — bottom-left */}
-        <div class="p-4 ring ring-base-300">
+        <div class="p-4">
           <KeyInspector />
         </div>
         {/* bottom-right — empty, Canvas shows through */}
