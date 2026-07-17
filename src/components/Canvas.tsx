@@ -3,6 +3,7 @@ import { createMemo, createSignal, For, onMount, Show } from 'solid-js'
 import {
   deselectAll,
   endItemDrag,
+  hasRotationCenter,
   isDragging,
   isKeyVisible,
   KEY_UNIT,
@@ -363,7 +364,7 @@ export function Canvas(props: CanvasProps) {
         </For>
 
         {/* Rotation origin indicators for selected keys with rotation */}
-        <For each={state.keys.filter(k => state.selectedIds.includes(k.id) && (k.r !== 0 || k.rx !== 0 || k.ry !== 0))}>
+        <For each={state.keys.filter(k => state.selectedIds.includes(k.id) && hasRotationCenter(k))}>
           {key => (
             <span
               class="pointer-events-none absolute icon-[lucide--x] size-6 text-2xl text-primary/75"

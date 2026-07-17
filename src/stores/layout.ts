@@ -1,4 +1,4 @@
-import type { CanvasItem, EncoderData, ItemDragState, KeyData, LayoutState, LShape, PinData, PinDirection } from '../types'
+import type { CanvasItem, EncoderData, ItemDragOrigin, ItemDragState, KeyData, LayoutState, LShape, PinData, PinDirection } from '../types'
 import { createShortcut } from '@solid-primitives/keyboard'
 import { nanoid } from 'nanoid'
 import { createSignal } from 'solid-js'
@@ -140,11 +140,17 @@ export { isDragging }
 
 /** Start dragging all currently selected items. Call on pointerdown on a selected item. */
 export const startItemDrag = withHistory((): void => {
-  const origins = new Map<string, { x: number, y: number }>()
+  const origins = new Map<string, ItemDragOrigin>()
   for (const id of state.selectedIds) {
     const item = getItem(id)
     if (item) {
-      origins.set(id, { x: item.data.x, y: item.data.y })
+      const o: ItemDragOrigin = { x: item.data.x, y: item.data.y }
+      if (item.type === 'key') {
+        o.r = item.data.r
+        o.rx = item.data.rx
+        o.ry = item.data.ry
+      }
+      origins.set(id, o)
     }
   }
 
@@ -162,7 +168,21 @@ export function updateItemDrag(dx: number, dy: number): void {
     if (!o) continue
     const newX = Math.max(0, o.x + dx)
     const newY = Math.max(0, o.y + dy)
+    // Use actual (clamped) delta so rx/ry stay in lockstep with x/y at edges
+    const actualDx = newX - o.x
+    const actualDy = newY - o.y
     updateItemPosition(id, newX, newY)
+
+    // Carry the rotation center along by the same delta. The condition is
+    // evaluated against the origin snapshot so it stays stable across drag
+    // frames (rx may transiently pass through 0 mid-drag).
+    if (o.r !== undefined && (o.r !== 0 || o.rx !== 0 || o.ry !== 0)) {
+      const keyIdx = state.keys.findIndex(k => k.id === id)
+      if (keyIdx !== -1) {
+        setState('keys', keyIdx, 'rx', (o.rx ?? 0) + actualDx)
+        setState('keys', keyIdx, 'ry', (o.ry ?? 0) + actualDy)
+      }
+    }
   }
 
   d.lastDx = dx
@@ -177,6 +197,14 @@ export function endItemDrag(): void {
     const item = getItem(id)
     if (item) {
       updateItemPosition(id, snap(item.data.x), snap(item.data.y))
+      // Snap the rotation center too, for keys that have a non-default origin
+      if (item.type === 'key' && hasRotationCenter(item.data)) {
+        const keyIdx = state.keys.findIndex(k => k.id === id)
+        if (keyIdx !== -1) {
+          setState('keys', keyIdx, 'rx', snap(item.data.rx))
+          setState('keys', keyIdx, 'ry', snap(item.data.ry))
+        }
+      }
     }
   }
 
@@ -394,7 +422,7 @@ export const moveSelected = withHistory((dx: number, dy: number): void => {
     const actualDx = newX - item.data.x
     const actualDy = newY - item.data.y
     updateItemPosition(id, newX, newY)
-    if (item.type === 'key') {
+    if (item.type === 'key' && hasRotationCenter(item.data)) {
       const keyIdx = state.keys.findIndex(k => k.id === id)
       if (keyIdx !== -1) {
         setState('keys', keyIdx, 'rx', snap(state.keys[keyIdx].rx + actualDx))
@@ -613,6 +641,11 @@ export const renameOptionGroup = withHistory((groupId: number, name: string): vo
 })
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
+
+/** Whether a key has a non-default rotation center (r, rx, ry not all zero). */
+export function hasRotationCenter(key: KeyData): boolean {
+  return key.r !== 0 || key.rx !== 0 || key.ry !== 0
+}
 
 /** Look up a canvas item by id across all entity arrays */
 export function getItem(id: string): CanvasItem | undefined {

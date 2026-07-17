@@ -69,10 +69,20 @@ export interface LayoutState {
   activeChoices: Record<number, number> // groupId → active choiceId
 }
 
+/** Snapshot of a single item's position at drag start (in key units) */
+export interface ItemDragOrigin {
+  x: number
+  y: number
+  /** Rotation angle/center snapshot (keys only) */
+  r?: number
+  rx?: number
+  ry?: number
+}
+
 /** Tracks an active item-drag (moving selected keys/encoders with the mouse) */
 export interface ItemDragState {
   /** Snapshot of selected items' positions at drag start (in key units) */
-  origins: Map<string, { x: number, y: number, rx?: number, ry?: number }>
+  origins: Map<string, ItemDragOrigin>
   /** Last applied dx/dy in key units (unsnapped, for live preview) */
   lastDx: number
   lastDy: number

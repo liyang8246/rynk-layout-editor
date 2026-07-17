@@ -24,7 +24,7 @@ dist-ssr
 *.sw?
 
 # Deepwork progress files
-.slim/deepwork
+.slim/deepwork/
 
 # BEGIN oh-my-opencode-slim clonedeps
 .slim/clonedeps/repos/
